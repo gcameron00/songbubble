@@ -1,13 +1,13 @@
 {
-  "name": "lyricbubble",
+  "name": "songbubble",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "wrangler pages dev .",
     "deploy": "wrangler pages deploy .",
-    "db:create": "wrangler d1 create lyricbubble",
-    "db:migrate:local": "wrangler d1 migrations apply lyricbubble --local",
-    "db:migrate:remote": "wrangler d1 migrations apply lyricbubble --remote"
+    "db:create": "wrangler d1 create songbubble-db",
+    "db:migrate:local": "wrangler d1 migrations apply songbubble-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply songbubble-db --remote"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",

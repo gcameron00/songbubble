@@ -1,7 +1,7 @@
 {
   // Cloudflare Pages + D1 config.
   // Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
-  "name": "lyricbubble",
+  "name": "songbubble",
 
   // Serve the static site from the repo root (no build step).
   "pages_build_output_dir": ".",
@@ -10,9 +10,8 @@
     {
       // The binding name used in Functions: env.DB
       "binding": "DB",
-      "database_name": "lyricbubble",
-      // Run `wrangler d1 create lyricbubble` and paste the returned ID here.
-      "database_id": "db57f284-76f6-4d7f-9bec-ebf8d62d9048",
+      "database_name": "songbubble-db",
+      "database_id": "6727e8a5-16e8-4365-b26c-062894c58c03",
       "migrations_dir": "migrations"
     }
   ]
