@@ -10,38 +10,6 @@
     <script defer src="/assets/js/submit.js"></script>
   </head>
   <body>
-    <!-- Archived prototype splash -->
-    <div id="splash" role="dialog" aria-modal="true" aria-labelledby="splash-title">
-      <div class="splash-card">
-        <p class="splash-eyebrow">&#9888;</p>
-        <h2 id="splash-title">Proof of Concept &mdash; Archived Prototype</h2>
-        <div class="splash-body">
-          <p>This website is an early experimental prototype created to explore a user-voted music chart concept based on song lyrics.</p>
-          <p>Development has been discontinued and the site is left online for demonstration purposes only.</p>
-          <p>Features may be incomplete or non-functional, and the data may not be maintained.</p>
-          <p>This project is not actively developed or supported.</p>
-        </div>
-        <button id="splash-close" class="splash-btn">Continue to site</button>
-        <p class="splash-footer">Song lyrics and related content belong to their respective copyright holders.</p>
-      </div>
-    </div>
-    <script>
-      (function () {
-        var splash = document.getElementById('splash');
-        var close  = document.getElementById('splash-close');
-        if (sessionStorage.getItem('splash-ok')) {
-          splash.hidden = true;
-        } else {
-          close.addEventListener('click', function () {
-            splash.hidden = true;
-            sessionStorage.setItem('splash-ok', '1');
-          });
-        }
-      })();
-    </script>
-
-    <!-- Archived sash -->
-    <div class="sash-wrap" aria-hidden="true"><div class="sash">Archived Prototype</div></div>
     <header class="site-header">
       <div class="container header-inner">
         <a href="/" class="logo" aria-label="LyricBubble home">
