@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BubbleTrouble &mdash; LyricBubble debug</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/bubbletrouble/" class="logo" style="color: #d97706;">
+          <span class="logo-bubble" style="color: #f59e0b;" aria-hidden="true">&#9679;</span>
+          BubbleTrouble
+        </a>
+        <nav class="site-nav">
+          <a href="/bubbletrouble/" class="debug-link active">Overview</a>
+          <a href="/bubbletrouble/lyrics/" class="debug-link">Lyrics</a>
+          <a href="/bubbletrouble/votes/" class="debug-link">Votes</a>
+          <span class="site-nav-divider" aria-hidden="true"></span>
+          <a href="/">&#8592; LyricBubble</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container" style="padding-top: 2rem;">
+
+      <div class="debug-header">
+        <h1>BubbleTrouble</h1>
+        <span class="debug-badge">debug</span>
+      </div>
+      <p class="debug-note">Internal troubleshooting dashboard. Not linked from the public site.</p>
+
+      <!-- ── Stats ───────────────────────────────────────────── -->
+      <section style="margin-bottom: 2.5rem;">
+        <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem; color: var(--muted); text-transform:uppercase; letter-spacing:.05em;">Database</h2>
+        <div class="bt-stats" id="stats">
+          <div class="bt-stat"><span class="bt-stat-val" id="s-lyrics">—</span><span class="bt-stat-label">Lyrics</span></div>
+          <div class="bt-stat"><span class="bt-stat-val" id="s-votes">—</span><span class="bt-stat-label">Total votes</span></div>
+          <div class="bt-stat"><span class="bt-stat-val" id="s-today">—</span><span class="bt-stat-label">Votes today</span></div>
+          <div class="bt-stat"><span class="bt-stat-val" id="s-fp">—</span><span class="bt-stat-label">Unique users</span></div>
+        </div>
+      </section>
+
+      <!-- ── Table views ─────────────────────────────────────── -->
+      <section style="margin-bottom: 2.5rem;">
+        <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem; color: var(--muted); text-transform:uppercase; letter-spacing:.05em;">Table views</h2>
+        <div class="bt-cards">
+          <a href="/bubbletrouble/lyrics/" class="bt-card">
+            <span class="bt-card-title">Lyrics</span>
+            <span class="bt-card-desc">All lyric rows ordered by ID, with current decay score.</span>
+            <span class="bt-card-arrow">&#8594;</span>
+          </a>
+          <a href="/bubbletrouble/votes/" class="bt-card">
+            <span class="bt-card-title">Votes</span>
+            <span class="bt-card-desc">All vote rows, newest first. Fingerprints truncated.</span>
+            <span class="bt-card-arrow">&#8594;</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- ── Utilities ───────────────────────────────────────── -->
+      <section>
+        <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem; color: var(--muted); text-transform:uppercase; letter-spacing:.05em;">Utilities</h2>
+        <div class="bt-utils">
+
+          <!-- Wipe votes -->
+          <div class="bt-util" id="u-clean">
+            <div class="bt-util-info">
+              <span class="bt-util-title">Wipe voting data</span>
+              <span class="bt-util-desc">Deletes all rows from the votes table. Lyrics are kept.</span>
+            </div>
+            <button class="bt-util-btn" onclick="arm('u-clean')">Wipe votes</button>
+            <div class="bt-confirm hidden" id="u-clean-confirm">
+              <span class="bt-confirm-msg">&#9888; This will delete <strong>all votes</strong>. Scores will drop to zero. Type <strong>votes</strong> to confirm.</span>
+              <input class="bt-confirm-input" type="text" placeholder="Type votes to confirm" autocomplete="off" oninput="checkConfirmInput('u-clean', 'votes', this)" />
+              <button class="bt-confirm-yes" data-label="Yes, wipe votes" disabled onclick="run('u-clean', '/api/debug/clean-votes', 'Votes wiped.')">Yes, wipe votes</button>
+              <button class="bt-confirm-cancel" onclick="disarm('u-clean')">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Full reset -->
+          <div class="bt-util" id="u-reset">
+            <div class="bt-util-info">
+              <span class="bt-util-title">Full database reset</span>
+              <span class="bt-util-desc">Deletes all rows from both the votes <em>and</em> lyrics tables. Cannot be undone.</span>
+            </div>
+            <button class="bt-util-btn bt-util-btn--danger" onclick="arm('u-reset')">Reset database</button>
+            <div class="bt-confirm hidden" id="u-reset-confirm">
+              <span class="bt-confirm-msg">&#9888; This will delete <strong>all lyrics and all votes</strong>. The chart will be empty. Type <strong>reset</strong> to confirm.</span>
+              <input class="bt-confirm-input" type="text" placeholder="Type reset to confirm" autocomplete="off" oninput="checkConfirmInput('u-reset', 'reset', this)" />
+              <button class="bt-confirm-yes bt-confirm-yes--danger" data-label="Yes, reset everything" disabled onclick="run('u-reset', '/api/debug/reset', 'Database reset.')">Yes, reset everything</button>
+              <button class="bt-confirm-cancel" onclick="disarm('u-reset')">Cancel</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p><a href="/">&#8592; Back to LyricBubble</a></p>
+      </div>
+    </footer>
+
+    <script>
+      function loadStats() {
+        fetch('/api/debug/stats')
+          .then(r => r.json())
+          .then(d => {
+            document.getElementById('s-lyrics').textContent = d.lyrics_count;
+            document.getElementById('s-votes').textContent  = d.votes_count;
+            document.getElementById('s-today').textContent  = d.votes_today;
+            document.getElementById('s-fp').textContent     = d.unique_fingerprints;
+          })
+          .catch(() => {
+            document.getElementById('stats').textContent = 'Could not load stats.';
+          });
+      }
+
+      // Enable the yes button only when the user has typed the required word.
+      function checkConfirmInput(id, word, input) {
+        document.querySelector('#' + id + '-confirm .bt-confirm-yes').disabled =
+          input.value !== word;
+      }
+
+      // Show confirmation panel for a utility action.
+      function arm(id) {
+        document.getElementById(id + '-confirm').classList.remove('hidden');
+        document.querySelector('#' + id + ' .bt-util-btn').disabled = true;
+        const input = document.querySelector('#' + id + '-confirm .bt-confirm-input');
+        if (input) { input.value = ''; input.focus(); }
+      }
+
+      // Hide confirmation panel, reset yes button, and re-enable the trigger.
+      function disarm(id) {
+        const panel  = document.getElementById(id + '-confirm');
+        const yesBtn = panel.querySelector('.bt-confirm-yes');
+        const input  = panel.querySelector('.bt-confirm-input');
+        panel.classList.add('hidden');
+        document.querySelector('#' + id + ' .bt-util-btn').disabled = false;
+        yesBtn.disabled    = true;
+        yesBtn.textContent = yesBtn.dataset.label;
+        if (input) input.value = '';
+      }
+
+      // Execute a utility action then refresh stats.
+      async function run(id, endpoint, successMsg) {
+        const yesBtn = document.querySelector('#' + id + '-confirm .bt-confirm-yes');
+        yesBtn.disabled = true;
+        yesBtn.textContent = 'Working\u2026';
+        try {
+          const res = await fetch(endpoint, { method: 'POST' });
+          const data = await res.json();
+          if (!res.ok || !data.ok) throw new Error(data.error ?? 'Unknown error');
+          disarm(id);
+          // Brief success flash on the util row.
+          const row = document.getElementById(id);
+          row.style.outline = '2px solid #16a34a';
+          setTimeout(() => { row.style.outline = ''; }, 1500);
+          loadStats();
+        } catch (err) {
+          yesBtn.textContent = 'Retry';
+          // Re-enable only if the input word still matches (it should — user didn't clear it).
+          const input = document.querySelector('#' + id + '-confirm .bt-confirm-input');
+          yesBtn.disabled = input ? true : false; // will be re-enabled once input re-validates
+          if (input) { input.value = ''; input.focus(); }
+          document.querySelector('#' + id + '-confirm .bt-confirm-msg').textContent =
+            '\u26a0 Error: ' + err.message;
+        }
+      }
+
+      loadStats();
+    </script>
+  </body>
+</html>

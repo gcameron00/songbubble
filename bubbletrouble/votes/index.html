@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Votes table &mdash; BubbleTrouble</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/bubbletrouble/" class="logo" style="color: #d97706;">
+          <span class="logo-bubble" style="color: #f59e0b;" aria-hidden="true">&#9679;</span>
+          BubbleTrouble
+        </a>
+        <nav class="site-nav">
+          <a href="/bubbletrouble/" class="debug-link">Overview</a>
+          <a href="/bubbletrouble/lyrics/" class="debug-link">Lyrics</a>
+          <a href="/bubbletrouble/votes/" class="debug-link active">Votes</a>
+          <span class="site-nav-divider" aria-hidden="true"></span>
+          <a href="/">&#8592; LyricBubble</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="debug-header">
+        <h1>Votes table</h1>
+        <span class="debug-badge">debug</span>
+      </div>
+      <p class="debug-note">All votes, newest first. Fingerprints are truncated to the first 8 characters.</p>
+
+      <div id="status" class="debug-note">Loading&hellip;</div>
+
+      <div class="debug-table-wrap">
+        <table class="debug-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Lyric ID</th>
+              <th>Lyric</th>
+              <th>Fingerprint</th>
+              <th>Vote day</th>
+              <th>Created (UTC)</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="debug-pagination" id="pagination"></div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p><a href="/bubbletrouble/">&#8592; Back to BubbleTrouble</a></p>
+      </div>
+    </footer>
+
+    <script>
+      let currentPage = parseInt(new URLSearchParams(location.search).get('page') ?? '1');
+
+      async function load(page) {
+        document.getElementById('status').textContent = 'Loading\u2026';
+        const res  = await fetch(`/api/debug/votes?page=${page}`);
+        const data = await res.json();
+
+        document.getElementById('status').textContent =
+          `${data.total} row${data.total === 1 ? '' : 's'} \u2014 page ${data.page} of ${Math.ceil(data.total / data.per_page) || 1}`;
+
+        const tbody = document.getElementById('tbody');
+        tbody.innerHTML = '';
+        for (const row of data.results) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="num">${row.id}</td>
+            <td class="num">${row.lyric_id}</td>
+            <td>${esc(row.lyric_label ?? '\u2014')}</td>
+            <td class="mono">${esc(row.fingerprint)}</td>
+            <td class="mono">${esc(row.vote_day)}</td>
+            <td class="mono">${new Date(row.created_at * 1000).toISOString().slice(0, 19).replace('T', ' ')}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        renderPagination(page, Math.ceil(data.total / data.per_page) || 1);
+      }
+
+      function renderPagination(page, totalPages) {
+        const pg = document.getElementById('pagination');
+        pg.innerHTML = '';
+        if (page > 1) {
+          const b = document.createElement('button');
+          b.textContent = '\u2190 Prev';
+          b.className = 'pg-btn';
+          b.onclick = () => navigate(page - 1);
+          pg.appendChild(b);
+        }
+        if (page < totalPages) {
+          const b = document.createElement('button');
+          b.textContent = 'Next \u2192';
+          b.className = 'pg-btn';
+          b.onclick = () => navigate(page + 1);
+          pg.appendChild(b);
+        }
+      }
+
+      function navigate(page) {
+        currentPage = page;
+        history.pushState(null, '', `?page=${page}`);
+        load(page);
+      }
+
+      function esc(str) {
+        return String(str)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      window.addEventListener('popstate', () => {
+        currentPage = parseInt(new URLSearchParams(location.search).get('page') ?? '1');
+        load(currentPage);
+      });
+
+      load(currentPage);
+    </script>
+  </body>
+</html>

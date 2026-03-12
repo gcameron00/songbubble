@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Node / build artifacts (safe to include even if unused)
+node_modules/
+dist/
+build/
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.local
+
+# Wrangler local dev state (local D1 database, temp build bundles)
+.wrangler/
+
+# Editor settings
+.vscode/
+
+# Claude Code local settings (machine-specific permission overrides)
+.claude/

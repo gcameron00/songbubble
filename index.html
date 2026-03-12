@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LyricBubble — Top lyrics right now</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <script defer src="/assets/js/main.js"></script>
+    <script defer src="/assets/js/tagline.js"></script>
+    <script defer src="/assets/js/submit.js"></script>
+  </head>
+  <body>
+    <!-- Archived prototype splash -->
+    <div id="splash" role="dialog" aria-modal="true" aria-labelledby="splash-title">
+      <div class="splash-card">
+        <p class="splash-eyebrow">&#9888;</p>
+        <h2 id="splash-title">Proof of Concept &mdash; Archived Prototype</h2>
+        <div class="splash-body">
+          <p>This website is an early experimental prototype created to explore a user-voted music chart concept based on song lyrics.</p>
+          <p>Development has been discontinued and the site is left online for demonstration purposes only.</p>
+          <p>Features may be incomplete or non-functional, and the data may not be maintained.</p>
+          <p>This project is not actively developed or supported.</p>
+        </div>
+        <button id="splash-close" class="splash-btn">Continue to site</button>
+        <p class="splash-footer">Song lyrics and related content belong to their respective copyright holders.</p>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var splash = document.getElementById('splash');
+        var close  = document.getElementById('splash-close');
+        if (sessionStorage.getItem('splash-ok')) {
+          splash.hidden = true;
+        } else {
+          close.addEventListener('click', function () {
+            splash.hidden = true;
+            sessionStorage.setItem('splash-ok', '1');
+          });
+        }
+      })();
+    </script>
+
+    <!-- Archived sash -->
+    <div class="sash-wrap" aria-hidden="true"><div class="sash">Archived Prototype</div></div>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/" class="logo" aria-label="LyricBubble home">
+          <span class="logo-bubble" aria-hidden="true">&#9679;</span>
+          LyricBubble
+        </a>
+        <nav class="site-nav">
+          <a href="/">Chart</a>
+          <a href="/about/">About</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h1>What line <span id="tagline-phrase" aria-live="polite">hits hardest?</span></h1>
+        <p class="hero-sub">Vote for the lyric that stuck with you. Votes fade over time — keep the chart honest.</p>
+      </section>
+
+      <section class="search-section" aria-label="Search lyrics">
+        <form class="search-form" id="search-form" role="search">
+          <input
+            type="search"
+            id="search-input"
+            class="search-input"
+            placeholder="Search by song or artist &mdash; or add a lyric&hellip;"
+            aria-label="Search by song or artist"
+            autocomplete="off"
+          />
+          <button type="submit" class="search-btn" aria-label="Search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+        </form>
+      </section>
+
+      <section class="chart-section" aria-label="Top lyrics chart">
+        <div class="chart-header">
+          <h2 class="chart-title">Top 10 this week</h2>
+          <span class="chart-meta" id="vote-budget-display"></span>
+        </div>
+        <ol class="chart-list" id="chart-list" aria-live="polite">
+          <!-- Rendered by main.js -->
+        </ol>
+        <p class="no-results hidden" id="no-results">No lyrics match your search.</p>
+      </section>
+
+      <div id="lyric-add" hidden></div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>&copy; 2026 LyricBubble &mdash; <a href="/about/">About</a></p>
+        <p class="footer-note">Votes fade over 7 days to keep the chart fresh.</p>
+      </div>
+    </footer>
+  </body>
+</html>
