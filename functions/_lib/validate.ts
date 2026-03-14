@@ -1,6 +1,6 @@
 /**
- * Shared validation for lyric submissions.
- * Applied server-side in POST /api/lyrics.
+ * Shared validation for song submissions.
+ * Applied server-side in POST /api/songs.
  *
  * Content policy:
  *   - Identity-based slurs and common profanity are blocked.
@@ -42,7 +42,7 @@ const BLOCKLIST: readonly string[] = [
 
 const URL_RE    = /https?:\/\/|www\.\S|\.com\b|\.net\b|\.org\b/i;
 const EMAIL_RE  = /\S+@\S+\.\S+/;
-const REPEAT_RE = /(.)\1{6,}/; // same character repeated 7+ times
+const REPEAT_RE = /(.)\1{6,}/;
 
 export interface FieldError {
   field: string;
@@ -69,19 +69,19 @@ function containsBlockedWord(text: string): boolean {
 }
 
 export function validateSubmission(
-  text: string,
+  title: string,
   artist: string,
-  song: string,
+  album: string,
 ): FieldError[] {
   const errors: FieldError[] = [];
-  const all = `${text} ${artist} ${song}`;
+  const all = `${title} ${artist} ${album}`;
 
-  if (!text?.trim()) {
-    errors.push({ field: 'text', message: 'Lyric line is required.' });
-  } else if (text.trim().length < 5) {
-    errors.push({ field: 'text', message: 'Lyric is too short.' });
-  } else if (text.length > 300) {
-    errors.push({ field: 'text', message: 'Lyric is too long (max 300 characters).' });
+  if (!title?.trim()) {
+    errors.push({ field: 'title', message: 'Song title is required.' });
+  } else if (title.trim().length < 2) {
+    errors.push({ field: 'title', message: 'Title is too short.' });
+  } else if (title.length > 100) {
+    errors.push({ field: 'title', message: 'Title is too long (max 100 characters).' });
   }
 
   if (!artist?.trim()) {
@@ -90,22 +90,19 @@ export function validateSubmission(
     errors.push({ field: 'artist', message: 'Artist name is too long (max 100 characters).' });
   }
 
-  if (!song?.trim()) {
-    errors.push({ field: 'song', message: 'Song title is required.' });
-  } else if (song.length > 100) {
-    errors.push({ field: 'song', message: 'Song title is too long (max 100 characters).' });
+  if (album && album.length > 100) {
+    errors.push({ field: 'album', message: 'Album name is too long (max 100 characters).' });
   }
 
-  // Spam / content checks — only run if no length errors to avoid duplicate messages.
   if (errors.length === 0) {
     if (URL_RE.test(all)) {
-      errors.push({ field: 'text', message: 'Links are not allowed in submissions.' });
+      errors.push({ field: 'title', message: 'Links are not allowed in submissions.' });
     } else if (EMAIL_RE.test(all)) {
-      errors.push({ field: 'text', message: 'Email addresses are not allowed.' });
+      errors.push({ field: 'title', message: 'Email addresses are not allowed.' });
     } else if (REPEAT_RE.test(all)) {
-      errors.push({ field: 'text', message: 'This submission looks like spam.' });
+      errors.push({ field: 'title', message: 'This submission looks like spam.' });
     } else if (containsBlockedWord(all)) {
-      errors.push({ field: 'text', message: "This submission contains content we can't accept." });
+      errors.push({ field: 'title', message: "This submission contains content we can't accept." });
     }
   }
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Lyrics table &mdash; BubbleTrouble</title>
+    <title>Songs table &mdash; BubbleTrouble</title>
     <link rel="stylesheet" href="/assets/css/styles.css" />
   </head>
   <body>
@@ -15,7 +15,7 @@
         </a>
         <nav class="site-nav">
           <a href="/bubbletrouble/" class="debug-link">Overview</a>
-          <a href="/bubbletrouble/lyrics/" class="debug-link active">Lyrics</a>
+          <a href="/bubbletrouble/songs/" class="debug-link active">Songs</a>
           <a href="/bubbletrouble/votes/" class="debug-link">Votes</a>
           <span class="site-nav-divider" aria-hidden="true"></span>
           <a href="/">&#8592; SongBubble</a>
@@ -25,10 +25,10 @@
 
     <main class="container">
       <div class="debug-header">
-        <h1>Lyrics table</h1>
+        <h1>Songs table</h1>
         <span class="debug-badge">debug</span>
       </div>
-      <p class="debug-note">All lyrics ordered by ID. Score is the current decay-weighted vote total.</p>
+      <p class="debug-note">All songs ordered by ID. Score is the current decay-weighted vote total.</p>
 
       <div id="status" class="debug-note">Loading&hellip;</div>
 
@@ -37,9 +37,9 @@
           <thead>
             <tr>
               <th>ID</th>
-              <th>Lyric</th>
+              <th>Title</th>
               <th>Artist</th>
-              <th>Song</th>
+              <th>Album</th>
               <th>Score</th>
               <th>Added (UTC)</th>
             </tr>
@@ -62,7 +62,7 @@
 
       async function load(page) {
         document.getElementById('status').textContent = 'Loading\u2026';
-        const res  = await fetch(`/api/debug/lyrics?page=${page}`);
+        const res  = await fetch(`/api/debug/songs?page=${page}`);
         const data = await res.json();
 
         document.getElementById('status').textContent =
@@ -74,9 +74,9 @@
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td class="num">${row.id}</td>
-            <td class="lyric-cell">${esc(row.text)}</td>
+            <td class="song-cell">${esc(row.title)}</td>
             <td>${esc(row.artist)}</td>
-            <td>${esc(row.song)}</td>
+            <td>${esc(row.album ?? '\u2014')}</td>
             <td class="num">${row.score}</td>
             <td class="mono">${new Date(row.created_at * 1000).toISOString().slice(0, 19).replace('T', ' ')}</td>
           `;

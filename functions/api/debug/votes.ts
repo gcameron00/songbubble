@@ -17,13 +17,13 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     env.DB.prepare(`
       SELECT
         v.id,
-        v.lyric_id,
-        l.artist || ' — ' || l.song AS lyric_label,
-        SUBSTR(v.fingerprint, 1, 8) || '…' AS fingerprint,
+        v.song_id,
+        s.artist || ' \u2014 ' || s.title AS song_label,
+        SUBSTR(v.fingerprint, 1, 8) || '\u2026' AS fingerprint,
         v.vote_day,
         v.created_at
       FROM votes v
-      LEFT JOIN lyrics l ON l.id = v.lyric_id
+      LEFT JOIN songs s ON s.id = v.song_id
       ORDER BY v.id DESC
       LIMIT ? OFFSET ?
     `).bind(PER_PAGE, offset).all(),

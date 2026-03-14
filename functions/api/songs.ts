@@ -1,31 +1,31 @@
 /**
- * GET  /api/lyrics  — top 10 lyrics by decay-weighted vote score
- * POST /api/lyrics  — submit a new lyric
+ * GET  /api/songs  — top 10 songs by decay-weighted vote score
+ * POST /api/songs  — submit a new song
  */
 import type { Env } from '../env.d.ts';
 import { validateSubmission } from '../_lib/validate';
 
-const DECAY_SECONDS = 7 * 24 * 60 * 60; // 604 800 s = 7 days
+const DECAY_SECONDS = 28 * 24 * 60 * 60; // 2 419 200 s = 28 days
 const CHART_SIZE    = 10;
 
 // Each vote contributes its own decayed value so fresh votes always count more
 // than old ones, regardless of when other votes were cast.
 const LEADERBOARD_SQL = `
   SELECT
-    l.id,
-    l.text,
-    l.artist,
-    l.song,
-    l.created_at,
+    s.id,
+    s.title,
+    s.artist,
+    s.album,
+    s.created_at,
     CAST(ROUND(
       COALESCE(
         SUM(MAX(0.0, 1.0 - (unixepoch() - v.created_at) / CAST(? AS REAL))),
         0
       )
     ) AS INTEGER) AS score
-  FROM lyrics l
-  LEFT JOIN votes v ON v.lyric_id = l.id
-  GROUP BY l.id
+  FROM songs s
+  LEFT JOIN votes v ON v.song_id = s.id
+  GROUP BY s.id
   ORDER BY score DESC
   LIMIT ?
 `;
@@ -48,23 +48,25 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { text, artist, song } = body as Record<string, string>;
+  const { title, artist, album } = body as Record<string, string>;
 
-  const errors = validateSubmission(text ?? '', artist ?? '', song ?? '');
+  const errors = validateSubmission(title ?? '', artist ?? '', album ?? '');
   if (errors.length > 0) {
     return Response.json({ errors }, { status: 422 });
   }
 
-  const t = text.trim(), a = artist.trim(), s = song.trim();
+  const t = title.trim();
+  const a = artist.trim();
+  const al = album?.trim() || null;
 
   const { meta } = await env.DB.prepare(
-    'INSERT INTO lyrics (text, artist, song) VALUES (?, ?, ?)',
+    'INSERT INTO songs (title, artist, album) VALUES (?, ?, ?)',
   )
-    .bind(t, a, s)
+    .bind(t, a, al)
     .run();
 
   return Response.json(
-    { id: meta.last_row_id, lyric: { id: meta.last_row_id, text: t, artist: a, song: s, score: 0 } },
+    { id: meta.last_row_id, song: { id: meta.last_row_id, title: t, artist: a, album: al, score: 0 } },
     { status: 201 },
   );
 };

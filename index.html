@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SongBubble — Top lyrics right now</title>
+    <title>SongBubble — Top songs right now</title>
     <link rel="stylesheet" href="/assets/css/styles.css" />
     <script defer src="/assets/js/main.js"></script>
     <script defer src="/assets/js/tagline.js"></script>
@@ -25,18 +25,18 @@
 
     <main class="container">
       <section class="hero">
-        <h1>What line <span id="tagline-phrase" aria-live="polite">hits hardest?</span></h1>
-        <p class="hero-sub">Vote for the lyric that stuck with you. Votes fade over time — keep the chart honest.</p>
+        <h1>What song <span id="tagline-phrase" aria-live="polite">is hitting right now?</span></h1>
+        <p class="hero-sub">Vote for the songs you love most. Votes fade over 28 days — keep the chart honest.</p>
       </section>
 
-      <section class="search-section" aria-label="Search lyrics">
+      <section class="search-section" aria-label="Search songs">
         <form class="search-form" id="search-form" role="search">
           <input
             type="search"
             id="search-input"
             class="search-input"
-            placeholder="Search by song or artist &mdash; or add a lyric&hellip;"
-            aria-label="Search by song or artist"
+            placeholder="Search by song, artist or album&hellip;"
+            aria-label="Search by song, artist or album"
             autocomplete="off"
           />
           <button type="submit" class="search-btn" aria-label="Search">
@@ -45,24 +45,24 @@
         </form>
       </section>
 
-      <section class="chart-section" aria-label="Top lyrics chart">
+      <section class="chart-section" aria-label="Top songs chart">
         <div class="chart-header">
-          <h2 class="chart-title">Top 10 this week</h2>
+          <h2 class="chart-title">Top 10 right now</h2>
           <span class="chart-meta" id="vote-budget-display"></span>
         </div>
         <ol class="chart-list" id="chart-list" aria-live="polite">
           <!-- Rendered by main.js -->
         </ol>
-        <p class="no-results hidden" id="no-results">No lyrics match your search.</p>
+        <p class="no-results hidden" id="no-results">No songs match your search.</p>
       </section>
 
-      <div id="lyric-add" hidden></div>
+      <div id="song-add" hidden></div>
     </main>
 
     <footer class="site-footer">
       <div class="container footer-inner">
         <p>&copy; 2026 SongBubble &mdash; <a href="/about/">About</a></p>
-        <p class="footer-note">Votes fade over 7 days to keep the chart fresh.</p>
+        <p class="footer-note">Votes fade over 28 days to keep the chart fresh.</p>
       </div>
     </footer>
   </body>

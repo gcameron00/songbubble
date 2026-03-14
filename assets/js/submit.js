@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * Lyric submission UI.
+ * Song submission UI.
  *
- * Watches the search input and surfaces an "Add a lyric" prompt whenever
+ * Watches the search input and surfaces an "Add a song" prompt whenever
  * the user has typed 2+ characters. Clicking the prompt opens an inline
- * form; successful submissions dispatch a 'lyric-added' CustomEvent so
- * main.js can add the new lyric to the live chart.
+ * form; successful submissions dispatch a 'song-added' CustomEvent so
+ * main.js can add the new song to the live chart.
  *
  * Client-side validation mirrors server-side validate.ts (server enforces
  * authoritatively — this is purely for fast feedback).
@@ -33,7 +33,6 @@ const BLOCKLIST = [
 const URL_RE    = /https?:\/\/|www\.\S|\.com\b|\.net\b|\.org\b/i;
 const EMAIL_RE  = /\S+@\S+\.\S+/;
 const REPEAT_RE = /(.)\1{6,}/;
-const MAX_LYRIC = 300;
 const MAX_FIELD = 100;
 
 function normalizeText(text) {
@@ -49,25 +48,24 @@ function containsBlockedWord(text) {
   return normalizeText(text).split(/\s+/).filter(Boolean).some(w => BLOCKLIST.includes(w));
 }
 
-function validateForm(lyric, artist, song) {
+function validateForm(title, artist, album) {
   const errors = {};
-  const all = `${lyric} ${artist} ${song}`;
+  const all = `${title} ${artist} ${album}`;
 
-  if (!lyric.trim())                   errors.lyric = 'Lyric line is required.';
-  else if (lyric.trim().length < 5)    errors.lyric = 'Lyric is too short.';
-  else if (lyric.length > MAX_LYRIC)   errors.lyric = `Max ${MAX_LYRIC} characters.`;
+  if (!title.trim())                  errors.title  = 'Song title is required.';
+  else if (title.trim().length < 2)   errors.title  = 'Title is too short.';
+  else if (title.length > MAX_FIELD)  errors.title  = `Max ${MAX_FIELD} characters.`;
 
-  if (!artist.trim())                  errors.artist = 'Artist name is required.';
-  else if (artist.length > MAX_FIELD)  errors.artist = 'Too long.';
+  if (!artist.trim())                 errors.artist = 'Artist name is required.';
+  else if (artist.length > MAX_FIELD) errors.artist = 'Too long.';
 
-  if (!song.trim())                    errors.song = 'Song title is required.';
-  else if (song.length > MAX_FIELD)    errors.song = 'Too long.';
+  if (album.length > MAX_FIELD)       errors.album  = 'Too long.';
 
   if (!Object.keys(errors).length) {
-    if (URL_RE.test(all))              errors.lyric = 'Links are not allowed.';
-    else if (EMAIL_RE.test(all))       errors.lyric = 'Email addresses are not allowed.';
-    else if (REPEAT_RE.test(all))      errors.lyric = 'This looks like spam.';
-    else if (containsBlockedWord(all)) errors.lyric = "Contains content we can't accept.";
+    if (URL_RE.test(all))              errors.title = 'Links are not allowed.';
+    else if (EMAIL_RE.test(all))       errors.title = 'Email addresses are not allowed.';
+    else if (REPEAT_RE.test(all))      errors.title = 'This looks like spam.';
+    else if (containsBlockedWord(all)) errors.title = "Contains content we can't accept.";
   }
 
   return errors;
@@ -86,7 +84,7 @@ function charCounter(current, max) {
   return `<span class="add-char-count${over ? ' add-char-count--over' : ''}">${current}/${max}</span>`;
 }
 
-function getSection() { return document.getElementById('lyric-add'); }
+function getSection() { return document.getElementById('song-add'); }
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -113,13 +111,13 @@ function renderPrompt(query, noResults) {
     <div class="add-prompt${prominent ? ' add-prompt--prominent' : ''}">
       <span class="add-prompt-text">
         ${prominent
-          ? 'No results — is this lyric missing from the chart?'
-          : 'Not seeing the line you have in mind?'}
+          ? 'No results — is this song missing from the chart?'
+          : 'Not seeing the song you have in mind?'}
       </span>
-      <button class="add-prompt-btn" id="add-lyric-btn">+ Add a lyric</button>
+      <button class="add-prompt-btn" id="add-song-btn">+ Add a song</button>
     </div>`;
 
-  document.getElementById('add-lyric-btn').addEventListener('click', openForm);
+  document.getElementById('add-song-btn').addEventListener('click', openForm);
 }
 
 // ── Form ──────────────────────────────────────────────────────────────────────
@@ -133,50 +131,50 @@ function openForm() {
   section.innerHTML = `
     <div class="add-panel" id="add-panel">
       <div class="add-panel-header">
-        <h3 class="add-panel-title">Add a lyric</h3>
+        <h3 class="add-panel-title">Add a song</h3>
         <button class="add-close" aria-label="Close" id="add-close">&times;</button>
       </div>
-      <p class="add-panel-sub">Share a line that deserves more love. It will enter the chart with zero votes — you can vote for it straight away.</p>
+      <p class="add-panel-sub">Nominate a song for the chart. It will enter with zero votes — you can vote for it straight away.</p>
 
       <div class="add-field">
-        <label class="add-label" for="add-input-lyric">Lyric line <span class="add-required">*</span></label>
-        <textarea class="add-textarea" id="add-input-lyric" rows="2" maxlength="320"
-          placeholder="The exact line, as sung\u2026" autocomplete="off"></textarea>
+        <label class="add-label" for="add-input-title">Song title <span class="add-required">*</span></label>
+        <input class="add-input" id="add-input-title" type="text" maxlength="110"
+          placeholder="e.g. Bohemian Rhapsody" autocomplete="off" />
         <div class="add-field-footer">
-          <span class="add-error" id="err-lyric"></span>
-          <span id="count-lyric">${charCounter(0, MAX_LYRIC)}</span>
+          <span class="add-error" id="err-title"></span>
+          <span id="count-title">${charCounter(0, MAX_FIELD)}</span>
         </div>
       </div>
 
       <div class="add-field">
         <label class="add-label" for="add-input-artist">Artist <span class="add-required">*</span></label>
         <input class="add-input" id="add-input-artist" type="text" maxlength="110"
-          placeholder="e.g. Radiohead" autocomplete="off" />
+          placeholder="e.g. Queen" autocomplete="off" />
         <span class="add-error" id="err-artist"></span>
       </div>
 
       <div class="add-field">
-        <label class="add-label" for="add-input-song">Song title <span class="add-required">*</span></label>
-        <input class="add-input" id="add-input-song" type="text" maxlength="110"
-          placeholder="e.g. Fake Plastic Trees" autocomplete="off" />
-        <span class="add-error" id="err-song"></span>
+        <label class="add-label" for="add-input-album">Album <span class="add-optional">(optional)</span></label>
+        <input class="add-input" id="add-input-album" type="text" maxlength="110"
+          placeholder="e.g. A Night at the Opera" autocomplete="off" />
+        <span class="add-error" id="err-album"></span>
       </div>
 
       <div class="add-actions">
-        <button class="add-submit-btn" id="add-submit">Submit lyric</button>
+        <button class="add-submit-btn" id="add-submit">Add song</button>
         <button class="add-cancel-btn" id="add-cancel">Cancel</button>
       </div>
     </div>`;
 
-  const lyricEl = document.getElementById('add-input-lyric');
-  lyricEl.addEventListener('input', () => {
-    document.getElementById('count-lyric').innerHTML = charCounter(lyricEl.value.length, MAX_LYRIC);
+  const titleEl = document.getElementById('add-input-title');
+  titleEl.addEventListener('input', () => {
+    document.getElementById('count-title').innerHTML = charCounter(titleEl.value.length, MAX_FIELD);
   });
 
   document.getElementById('add-close').addEventListener('click', closeForm);
   document.getElementById('add-cancel').addEventListener('click', closeForm);
   document.getElementById('add-submit').addEventListener('click', handleSubmit);
-  lyricEl.focus();
+  titleEl.focus();
 }
 
 function closeForm() {
@@ -191,32 +189,32 @@ function setError(id, msg) {
 }
 
 function clearErrors() {
-  ['err-lyric', 'err-artist', 'err-song'].forEach(id => setError(id, ''));
+  ['err-title', 'err-artist', 'err-album'].forEach(id => setError(id, ''));
 }
 
 async function handleSubmit() {
   clearErrors();
-  const lyric  = document.getElementById('add-input-lyric')?.value  ?? '';
+  const title  = document.getElementById('add-input-title')?.value  ?? '';
   const artist = document.getElementById('add-input-artist')?.value ?? '';
-  const song   = document.getElementById('add-input-song')?.value   ?? '';
+  const album  = document.getElementById('add-input-album')?.value  ?? '';
 
-  const errors = validateForm(lyric, artist, song);
+  const errors = validateForm(title, artist, album);
   if (Object.keys(errors).length) {
-    if (errors.lyric)  setError('err-lyric',  errors.lyric);
+    if (errors.title)  setError('err-title',  errors.title);
     if (errors.artist) setError('err-artist', errors.artist);
-    if (errors.song)   setError('err-song',   errors.song);
+    if (errors.album)  setError('err-album',  errors.album);
     return;
   }
 
   const btn = document.getElementById('add-submit');
   btn.disabled    = true;
-  btn.textContent = 'Submitting\u2026';
+  btn.textContent = 'Adding…';
 
   try {
-    const res  = await fetch('/api/lyrics', {
+    const res  = await fetch('/api/songs', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ text: lyric.trim(), artist: artist.trim(), song: song.trim() }),
+      body:    JSON.stringify({ title: title.trim(), artist: artist.trim(), album: album.trim() }),
     });
     const data = await res.json();
 
@@ -224,32 +222,32 @@ async function handleSubmit() {
       if (res.status === 422 && Array.isArray(data.errors)) {
         data.errors.forEach(e => setError('err-' + e.field, e.message));
       } else {
-        setError('err-lyric', data.error ?? 'Submission failed — please try again.');
+        setError('err-title', data.error ?? 'Submission failed — please try again.');
       }
       btn.disabled    = false;
-      btn.textContent = 'Submit lyric';
+      btn.textContent = 'Add song';
       return;
     }
 
-    if (data.lyric) {
-      document.dispatchEvent(new CustomEvent('lyric-added', { detail: data.lyric }));
+    if (data.song) {
+      document.dispatchEvent(new CustomEvent('song-added', { detail: data.song }));
     }
-    showSuccess(artist.trim(), song.trim());
+    showSuccess(title.trim(), artist.trim());
   } catch {
-    setError('err-lyric', 'Network error — please try again.');
+    setError('err-title', 'Network error — please try again.');
     btn.disabled    = false;
-    btn.textContent = 'Submit lyric';
+    btn.textContent = 'Add song';
   }
 }
 
-function showSuccess(artist, song) {
+function showSuccess(title, artist) {
   formOpen = false;
   const section = getSection();
   if (!section) return;
   section.innerHTML = `
     <div class="add-success">
       <span class="add-success-icon" aria-hidden="true">✓</span>
-      <span><strong>Lyric added!</strong> "${escHtml(artist)} — ${escHtml(song)}" is now on the chart with zero votes. Scroll down to find it and be the first to vote.</span>
+      <span><strong>Song added!</strong> "${escHtml(title)}" by ${escHtml(artist)} is now on the chart with zero votes. Scroll down to find it and be the first to vote.</span>
       <button class="add-close" id="add-dismiss" aria-label="Dismiss">&times;</button>
     </div>`;
   document.getElementById('add-dismiss').addEventListener('click', () => {

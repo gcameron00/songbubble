@@ -1,23 +1,23 @@
 /**
- * LyricBubble — main.js
+ * SongBubble — main.js
  *
- * Fetches the chart from /api/lyrics and posts votes to /api/votes.
+ * Fetches the chart from /api/songs and posts votes to /api/votes.
  *
- * localStorage is used only for UI state (which lyrics this browser has voted
+ * localStorage is used only for UI state (which songs this browser has voted
  * for, and the local vote budget counter). The server is the source of truth.
  *
- *   lb_voted   — JSON array of lyric IDs voted for by this browser
- *   lb_budget  — { used: number, day: string }
+ *   sb_voted   — JSON object { [songId]: dateString }
+ *   sb_budget  — { used: number, day: string }
  */
 
 'use strict';
 
 const VOTES_PER_DAY = 5;
-const LS_VOTED      = 'lb_voted';
-const LS_BUDGET     = 'lb_budget';
+const LS_VOTED      = 'sb_voted';
+const LS_BUDGET     = 'sb_budget';
 
 // ── App state ─────────────────────────────────────────────────────────────────
-let allLyrics   = [];
+let allSongs    = [];
 let searchQuery = '';
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// voted is stored as { [lyricId]: dateString } so we know if a vote was cast today.
+// voted is stored as { [songId]: dateString } so we know if a vote was cast today.
 function loadVoted() {
   try {
     const raw = JSON.parse(localStorage.getItem(LS_VOTED));
@@ -58,26 +58,26 @@ function votesRemaining() {
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
-async function fetchLyrics() {
-  const res = await fetch('/api/lyrics');
+async function fetchSongs() {
+  const res = await fetch('/api/songs');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
-async function postVote(lyricId) {
+async function postVote(songId) {
   const res = await fetch('/api/votes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lyric_id: lyricId }),
+    body: JSON.stringify({ song_id: songId }),
   });
   return { ok: res.ok, status: res.status };
 }
 
-async function deleteVote(lyricId) {
+async function deleteVote(songId) {
   const res = await fetch('/api/votes', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lyric_id: lyricId }),
+    body: JSON.stringify({ song_id: songId }),
   });
   return { ok: res.ok };
 }
@@ -95,9 +95,6 @@ async function fetchMyVotes() {
 }
 
 // Reconcile localStorage against the server's vote state.
-// - Clears today-entries that no longer exist on the server (e.g. after a wipe).
-// - Clears previous-day entries for lyrics the server has no record of.
-// - Adds today's server votes that localStorage is missing.
 function reconcileVotes({ voted_today, voted_ever }) {
   const today    = todayIso();
   const voted    = loadVoted();
@@ -118,29 +115,25 @@ function reconcileVotes({ voted_today, voted_ever }) {
 
 // ── FLIP animation ────────────────────────────────────────────────────────────
 
-// Snapshot the vertical position of every card currently in the chart.
 function capturePositions() {
   const map = new Map();
-  document.querySelectorAll('#chart-list .lyric-card').forEach(card => {
+  document.querySelectorAll('#chart-list .song-card').forEach(card => {
     map.set(card.dataset.id, card.getBoundingClientRect().top);
   });
   return map;
 }
 
-// After a re-render, animate each card from where it was to where it is now.
 function flipAnimate(prevTops) {
-  document.querySelectorAll('#chart-list .lyric-card').forEach(card => {
+  document.querySelectorAll('#chart-list .song-card').forEach(card => {
     const prevTop = prevTops.get(card.dataset.id);
     if (prevTop === undefined) return;
     const deltaY = prevTop - card.getBoundingClientRect().top;
     if (Math.abs(deltaY) < 1) return;
 
-    // Invert: jump the card back to its old position instantly.
     card.style.transition = 'none';
     card.style.transform  = `translateY(${deltaY}px)`;
-    void card.offsetHeight; // force reflow
+    void card.offsetHeight;
 
-    // Play: animate to the natural (new) position.
     card.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.15, 0.64, 1)';
     card.style.transform  = '';
     card.addEventListener('transitionend', () => { card.style.transition = ''; }, { once: true });
@@ -172,21 +165,17 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-function buildCard(lyric, rank, voted, hasVoteBudget) {
-  const voteDate        = voted[lyric.id];
+function buildCard(song, rank, voted, hasVoteBudget) {
+  const voteDate        = voted[song.id];
   const votedToday      = voteDate === todayIso();
   const previouslyVoted = voteDate !== undefined && !votedToday;
-  // Can vote if budget allows AND haven't already voted today.
   const canVote         = hasVoteBudget && !votedToday;
   const retractable     = votedToday;
 
   const li = document.createElement('li');
-  li.className = 'lyric-card';
-  li.dataset.id = lyric.id;
+  li.className = 'song-card';
+  li.dataset.id = song.id;
 
-  // Voted today: ♥ swaps to ✕ on hover (retractable).
-  // Previously voted (not today): ♡ with a subtle indicator — can vote again.
-  // Never voted: plain ♡.
   const voteIcon = retractable
     ? '<span class="icon-default">♥</span><span class="icon-hover">✕</span>'
     : '♡';
@@ -194,17 +183,17 @@ function buildCard(lyric, rank, voted, hasVoteBudget) {
   const btnLabel = retractable
     ? 'Remove your vote'
     : previouslyVoted ? 'You supported this before — vote again?'
-    : 'Vote for this lyric';
+    : 'Vote for this song';
 
   let btnClass = 'vote-btn';
-  if (retractable)     btnClass += ' voted retractable';
+  if (retractable)          btnClass += ' voted retractable';
   else if (previouslyVoted) btnClass += ' previously-voted';
 
   li.innerHTML = `
     <span class="rank ${rankClass(rank)}" aria-label="Rank ${rank}">${rankLabel(rank)}</span>
-    <div class="lyric-body">
-      <p class="lyric-text">${escHtml(lyric.text)}</p>
-      <p class="lyric-meta"><strong>${escHtml(lyric.artist)}</strong> &mdash; ${escHtml(lyric.song)}</p>
+    <div class="song-body">
+      <p class="song-title">${escHtml(song.title)}</p>
+      <p class="song-meta"><strong>${escHtml(song.artist)}</strong>${song.album ? ` &mdash; ${escHtml(song.album)}` : ''}</p>
     </div>
     <button
       class="${btnClass}"
@@ -213,14 +202,14 @@ function buildCard(lyric, rank, voted, hasVoteBudget) {
       ${canVote || retractable ? '' : 'disabled'}
     >
       <span class="vote-icon" aria-hidden="true">${voteIcon}</span>
-      <span class="vote-count">${fmtScore(lyric.score)}</span>
+      <span class="vote-count">${fmtScore(song.score)}</span>
     </button>
   `;
 
   if (retractable) {
-    li.querySelector('.vote-btn').addEventListener('click', () => retractVote(lyric.id));
+    li.querySelector('.vote-btn').addEventListener('click', () => retractVote(song.id));
   } else if (canVote) {
-    li.querySelector('.vote-btn').addEventListener('click', () => castVote(lyric.id));
+    li.querySelector('.vote-btn').addEventListener('click', () => castVote(song.id));
   }
 
   return li;
@@ -238,10 +227,10 @@ function render(skipEntrance = false) {
     : 'No votes left today';
 
   const filtered = searchQuery
-    ? allLyrics.filter(l =>
-        `${l.artist} ${l.song} ${l.text}`.toLowerCase().includes(searchQuery)
+    ? allSongs.filter(s =>
+        `${s.artist} ${s.title} ${s.album ?? ''}`.toLowerCase().includes(searchQuery)
       )
-    : allLyrics;
+    : allSongs;
 
   list.innerHTML = '';
 
@@ -251,10 +240,10 @@ function render(skipEntrance = false) {
   }
   noResults.classList.add('hidden');
 
-  filtered.forEach((lyric, i) => {
-    const card = buildCard(lyric, i + 1, voted, remaining > 0);
+  filtered.forEach((song, i) => {
+    const card = buildCard(song, i + 1, voted, remaining > 0);
     if (skipEntrance) {
-      card.style.animation = 'none'; // suppress entrance so FLIP can drive movement
+      card.style.animation = 'none';
     } else {
       card.style.animationDelay = `${i * 30}ms`;
     }
@@ -263,71 +252,63 @@ function render(skipEntrance = false) {
 }
 
 // ── Voting ────────────────────────────────────────────────────────────────────
-async function castVote(lyricId) {
+async function castVote(songId) {
   const budget = loadBudget();
   const voted  = loadVoted();
-  // Block only if already voted today — previous days are fine.
-  if (budget.used >= VOTES_PER_DAY || voted[lyricId] === todayIso()) return;
+  if (budget.used >= VOTES_PER_DAY || voted[songId] === todayIso()) return;
 
-  const previousDate = voted[lyricId]; // preserve for rollback
+  const previousDate = voted[songId];
 
-  // Optimistic update — feels instant for the user.
   const prevPositions = searchQuery ? null : capturePositions();
-  voted[lyricId] = todayIso();
+  voted[songId] = todayIso();
   budget.used += 1;
   saveVoted(voted);
   saveBudget(budget);
-  const lyric = allLyrics.find(l => l.id === lyricId);
-  if (lyric) lyric.score += 1;
-  allLyrics.sort((a, b) => b.score - a.score);
+  const song = allSongs.find(s => s.id === songId);
+  if (song) song.score += 1;
+  allSongs.sort((a, b) => b.score - a.score);
   render(!!prevPositions);
   if (prevPositions) flipAnimate(prevPositions);
 
-  // Confirm with the server.
-  const { ok, status } = await postVote(lyricId);
+  const { ok, status } = await postVote(songId);
   if (!ok) {
-    // Roll back, restoring the previous vote date if there was one.
-    if (previousDate !== undefined) voted[lyricId] = previousDate;
-    else delete voted[lyricId];
+    if (previousDate !== undefined) voted[songId] = previousDate;
+    else delete voted[songId];
     budget.used -= 1;
     saveVoted(voted);
     saveBudget(budget);
-    if (lyric) lyric.score = Math.max(0, lyric.score - 1);
-    allLyrics.sort((a, b) => b.score - a.score);
-    // Server says budget exhausted — sync local state so we stop trying.
+    if (song) song.score = Math.max(0, song.score - 1);
+    allSongs.sort((a, b) => b.score - a.score);
     if (status === 429) { budget.used = VOTES_PER_DAY; saveBudget(budget); }
-    render(true); // silent revert — no entrance flash, no FLIP
+    render(true);
   }
 }
 
-async function retractVote(lyricId) {
+async function retractVote(songId) {
   const voted  = loadVoted();
   const budget = loadBudget();
-  if (voted[lyricId] !== todayIso()) return;
+  if (voted[songId] !== todayIso()) return;
 
-  // Optimistic update.
   const prevPositions = searchQuery ? null : capturePositions();
-  delete voted[lyricId];
+  delete voted[songId];
   budget.used = Math.max(0, budget.used - 1);
   saveVoted(voted);
   saveBudget(budget);
-  const lyric = allLyrics.find(l => l.id === lyricId);
-  if (lyric) lyric.score = Math.max(0, lyric.score - 1);
-  allLyrics.sort((a, b) => b.score - a.score);
+  const song = allSongs.find(s => s.id === songId);
+  if (song) song.score = Math.max(0, song.score - 1);
+  allSongs.sort((a, b) => b.score - a.score);
   render(!!prevPositions);
   if (prevPositions) flipAnimate(prevPositions);
 
-  // Confirm with the server.
-  const { ok } = await deleteVote(lyricId);
+  const { ok } = await deleteVote(songId);
   if (!ok) {
-    // Roll back.
-    voted[lyricId] = todayIso();
+    voted[songId] = todayIso();
     budget.used += 1;
     saveVoted(voted);
     saveBudget(budget);
-    if (lyric) lyric.score += 1;
-    allLyrics.sort((a, b) => b.score - a.score);
-    render(true); // silent revert — no entrance flash, no FLIP
+    if (song) song.score += 1;
+    allSongs.sort((a, b) => b.score - a.score);
+    render(true);
   }
 }
 
@@ -352,14 +333,14 @@ function initSearch() {
   });
 }
 
-// ── Lyric submission ──────────────────────────────────────────────────────────
-// Receives new lyrics from submit.js after a successful POST and splices them
+// ── Song submission ───────────────────────────────────────────────────────────
+// Receives new songs from submit.js after a successful POST and splices them
 // into the live chart so the user can vote immediately without a page reload.
-document.addEventListener('lyric-added', (e) => {
-  const lyric = e.detail;
-  if (!lyric?.id) return;
-  allLyrics.push(lyric);
-  allLyrics.sort((a, b) => b.score - a.score);
+document.addEventListener('song-added', (e) => {
+  const song = e.detail;
+  if (!song?.id) return;
+  allSongs.push(song);
+  allSongs.sort((a, b) => b.score - a.score);
   render();
 });
 
@@ -368,16 +349,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSearch();
 
   document.getElementById('chart-list').innerHTML =
-    '<li class="no-results">Loading&hellip;</li>';
+    '<li class="no-results">Loading…</li>';
 
   try {
-    [allLyrics] = await Promise.all([
-      fetchLyrics(),
+    [allSongs] = await Promise.all([
+      fetchSongs(),
       fetchMyVotes().then(reconcileVotes),
     ]);
     render();
   } catch {
     document.getElementById('chart-list').innerHTML =
-      '<li class="no-results">Could not load the chart &mdash; please try refreshing.</li>';
+      '<li class="no-results">Could not load the chart — please try refreshing.</li>';
   }
 });

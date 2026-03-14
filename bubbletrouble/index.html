@@ -15,7 +15,7 @@
         </a>
         <nav class="site-nav">
           <a href="/bubbletrouble/" class="debug-link active">Overview</a>
-          <a href="/bubbletrouble/lyrics/" class="debug-link">Lyrics</a>
+          <a href="/bubbletrouble/songs/" class="debug-link">Songs</a>
           <a href="/bubbletrouble/votes/" class="debug-link">Votes</a>
           <span class="site-nav-divider" aria-hidden="true"></span>
           <a href="/">&#8592; SongBubble</a>
@@ -35,7 +35,7 @@
       <section style="margin-bottom: 2.5rem;">
         <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem; color: var(--muted); text-transform:uppercase; letter-spacing:.05em;">Database</h2>
         <div class="bt-stats" id="stats">
-          <div class="bt-stat"><span class="bt-stat-val" id="s-lyrics">—</span><span class="bt-stat-label">Lyrics</span></div>
+          <div class="bt-stat"><span class="bt-stat-val" id="s-songs">—</span><span class="bt-stat-label">Songs</span></div>
           <div class="bt-stat"><span class="bt-stat-val" id="s-votes">—</span><span class="bt-stat-label">Total votes</span></div>
           <div class="bt-stat"><span class="bt-stat-val" id="s-today">—</span><span class="bt-stat-label">Votes today</span></div>
           <div class="bt-stat"><span class="bt-stat-val" id="s-fp">—</span><span class="bt-stat-label">Unique users</span></div>
@@ -46,9 +46,9 @@
       <section style="margin-bottom: 2.5rem;">
         <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem; color: var(--muted); text-transform:uppercase; letter-spacing:.05em;">Table views</h2>
         <div class="bt-cards">
-          <a href="/bubbletrouble/lyrics/" class="bt-card">
-            <span class="bt-card-title">Lyrics</span>
-            <span class="bt-card-desc">All lyric rows ordered by ID, with current decay score.</span>
+          <a href="/bubbletrouble/songs/" class="bt-card">
+            <span class="bt-card-title">Songs</span>
+            <span class="bt-card-desc">All song rows ordered by ID, with current decay score.</span>
             <span class="bt-card-arrow">&#8594;</span>
           </a>
           <a href="/bubbletrouble/votes/" class="bt-card">
@@ -68,7 +68,7 @@
           <div class="bt-util" id="u-clean">
             <div class="bt-util-info">
               <span class="bt-util-title">Wipe voting data</span>
-              <span class="bt-util-desc">Deletes all rows from the votes table. Lyrics are kept.</span>
+              <span class="bt-util-desc">Deletes all rows from the votes table. Songs are kept.</span>
             </div>
             <button class="bt-util-btn" onclick="arm('u-clean')">Wipe votes</button>
             <div class="bt-confirm hidden" id="u-clean-confirm">
@@ -83,11 +83,11 @@
           <div class="bt-util" id="u-reset">
             <div class="bt-util-info">
               <span class="bt-util-title">Full database reset</span>
-              <span class="bt-util-desc">Deletes all rows from both the votes <em>and</em> lyrics tables. Cannot be undone.</span>
+              <span class="bt-util-desc">Deletes all rows from both the votes <em>and</em> songs tables. Cannot be undone.</span>
             </div>
             <button class="bt-util-btn bt-util-btn--danger" onclick="arm('u-reset')">Reset database</button>
             <div class="bt-confirm hidden" id="u-reset-confirm">
-              <span class="bt-confirm-msg">&#9888; This will delete <strong>all lyrics and all votes</strong>. The chart will be empty. Type <strong>reset</strong> to confirm.</span>
+              <span class="bt-confirm-msg">&#9888; This will delete <strong>all songs and all votes</strong>. The chart will be empty. Type <strong>reset</strong> to confirm.</span>
               <input class="bt-confirm-input" type="text" placeholder="Type reset to confirm" autocomplete="off" oninput="checkConfirmInput('u-reset', 'reset', this)" />
               <button class="bt-confirm-yes bt-confirm-yes--danger" data-label="Yes, reset everything" disabled onclick="run('u-reset', '/api/debug/reset', 'Database reset.')">Yes, reset everything</button>
               <button class="bt-confirm-cancel" onclick="disarm('u-reset')">Cancel</button>
@@ -110,7 +110,7 @@
         fetch('/api/debug/stats')
           .then(r => r.json())
           .then(d => {
-            document.getElementById('s-lyrics').textContent = d.lyrics_count;
+            document.getElementById('s-songs').textContent = d.songs_count;
             document.getElementById('s-votes').textContent  = d.votes_count;
             document.getElementById('s-today').textContent  = d.votes_today;
             document.getElementById('s-fp').textContent     = d.unique_fingerprints;

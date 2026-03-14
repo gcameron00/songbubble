@@ -15,7 +15,7 @@
         </a>
         <nav class="site-nav">
           <a href="/bubbletrouble/" class="debug-link">Overview</a>
-          <a href="/bubbletrouble/lyrics/" class="debug-link">Lyrics</a>
+          <a href="/bubbletrouble/songs/" class="debug-link">Songs</a>
           <a href="/bubbletrouble/votes/" class="debug-link active">Votes</a>
           <span class="site-nav-divider" aria-hidden="true"></span>
           <a href="/">&#8592; SongBubble</a>
@@ -37,8 +37,8 @@
           <thead>
             <tr>
               <th>ID</th>
-              <th>Lyric ID</th>
-              <th>Lyric</th>
+              <th>Song ID</th>
+              <th>Song</th>
               <th>Fingerprint</th>
               <th>Vote day</th>
               <th>Created (UTC)</th>
@@ -74,8 +74,8 @@
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td class="num">${row.id}</td>
-            <td class="num">${row.lyric_id}</td>
-            <td>${esc(row.lyric_label ?? '\u2014')}</td>
+            <td class="num">${row.song_id}</td>
+            <td>${esc(row.song_label ?? '\u2014')}</td>
             <td class="mono">${esc(row.fingerprint)}</td>
             <td class="mono">${esc(row.vote_day)}</td>
             <td class="mono">${new Date(row.created_at * 1000).toISOString().slice(0, 19).replace('T', ' ')}</td>
