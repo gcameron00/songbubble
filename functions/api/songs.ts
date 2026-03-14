@@ -1,28 +1,28 @@
 /**
- * GET  /api/songs  — top 10 songs by decay-weighted vote score
- * POST /api/songs  — submit a new song
+ * GET  /api/songs       — top 10 songs by decay-weighted vote score
+ * GET  /api/songs?q=…   — full-catalogue search (up to 50 results, with scores)
+ * POST /api/songs       — submit a new song
  */
 import type { Env } from '../env.d.ts';
 import { validateSubmission } from '../_lib/validate';
 
 const DECAY_SECONDS = 28 * 24 * 60 * 60; // 2 419 200 s = 28 days
 const CHART_SIZE    = 10;
+const SEARCH_LIMIT  = 50;
+
+const SCORE_FRAGMENT = `
+  CAST(ROUND(
+    COALESCE(
+      SUM(MAX(0.0, 1.0 - (unixepoch() - v.created_at) / CAST(? AS REAL))),
+      0
+    )
+  ) AS INTEGER) AS score
+`;
 
 // Each vote contributes its own decayed value so fresh votes always count more
 // than old ones, regardless of when other votes were cast.
 const LEADERBOARD_SQL = `
-  SELECT
-    s.id,
-    s.title,
-    s.artist,
-    s.album,
-    s.created_at,
-    CAST(ROUND(
-      COALESCE(
-        SUM(MAX(0.0, 1.0 - (unixepoch() - v.created_at) / CAST(? AS REAL))),
-        0
-      )
-    ) AS INTEGER) AS score
+  SELECT s.id, s.title, s.artist, s.album, s.created_at, ${SCORE_FRAGMENT}
   FROM songs s
   LEFT JOIN votes v ON v.song_id = s.id
   GROUP BY s.id
@@ -30,7 +30,28 @@ const LEADERBOARD_SQL = `
   LIMIT ?
 `;
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+const SEARCH_SQL = `
+  SELECT s.id, s.title, s.artist, s.album, s.created_at, ${SCORE_FRAGMENT}
+  FROM songs s
+  LEFT JOIN votes v ON v.song_id = s.id
+  WHERE LOWER(s.title)  LIKE '%' || LOWER(?) || '%'
+     OR LOWER(s.artist) LIKE '%' || LOWER(?) || '%'
+     OR LOWER(s.album)  LIKE '%' || LOWER(?) || '%'
+  GROUP BY s.id
+  ORDER BY score DESC
+  LIMIT ?
+`;
+
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  const q = new URL(request.url).searchParams.get('q')?.trim() ?? '';
+
+  if (q) {
+    const { results } = await env.DB.prepare(SEARCH_SQL)
+      .bind(DECAY_SECONDS, q, q, q, SEARCH_LIMIT)
+      .all();
+    return Response.json(results);
+  }
+
   const { results } = await env.DB.prepare(LEADERBOARD_SQL)
     .bind(DECAY_SECONDS, CHART_SIZE)
     .all();

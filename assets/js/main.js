@@ -17,8 +17,9 @@ const LS_VOTED      = 'sb_voted';
 const LS_BUDGET     = 'sb_budget';
 
 // ── App state ─────────────────────────────────────────────────────────────────
-let allSongs    = [];
-let searchQuery = '';
+let allSongs     = [];   // top-10 chart, loaded at boot
+let searchQuery  = '';
+let searchResults = null; // server search results, or null when chart is shown
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
 function todayIso() {
@@ -60,6 +61,12 @@ function votesRemaining() {
 // ── API ───────────────────────────────────────────────────────────────────────
 async function fetchSongs() {
   const res = await fetch('/api/songs');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function searchSongs(q) {
+  const res = await fetch(`/api/songs?q=${encodeURIComponent(q)}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -226,11 +233,7 @@ function render(skipEntrance = false) {
     ? `${remaining} vote${remaining === 1 ? '' : 's'} left today`
     : 'No votes left today';
 
-  const filtered = searchQuery
-    ? allSongs.filter(s =>
-        `${s.artist} ${s.title} ${s.album ?? ''}`.toLowerCase().includes(searchQuery)
-      )
-    : allSongs;
+  const filtered = searchQuery ? (searchResults ?? []) : allSongs;
 
   list.innerHTML = '';
 
@@ -318,18 +321,34 @@ function initSearch() {
   const input = document.getElementById('search-input');
 
   let debounce;
+  let lastQuery = '';
+
+  async function runSearch(q) {
+    searchQuery = q;
+    if (!q) {
+      searchResults = null;
+      render();
+      return;
+    }
+    // Show stale results immediately while the fetch is in flight.
+    render();
+    const results = await searchSongs(q);
+    // Discard if a newer query has already taken over.
+    if (q !== searchQuery) return;
+    searchResults = results;
+    render();
+  }
+
   input.addEventListener('input', () => {
     clearTimeout(debounce);
-    debounce = setTimeout(() => {
-      searchQuery = input.value.trim().toLowerCase();
-      render();
-    }, 150);
+    const q = input.value.trim();
+    debounce = setTimeout(() => runSearch(q), 200);
   });
 
   form.addEventListener('submit', e => {
     e.preventDefault();
-    searchQuery = input.value.trim().toLowerCase();
-    render();
+    clearTimeout(debounce);
+    runSearch(input.value.trim());
   });
 }
 
@@ -341,6 +360,11 @@ document.addEventListener('song-added', (e) => {
   if (!song?.id) return;
   allSongs.push(song);
   allSongs.sort((a, b) => b.score - a.score);
+  // Also add to current search results so it appears immediately.
+  if (searchResults) {
+    searchResults.push(song);
+    searchResults.sort((a, b) => b.score - a.score);
+  }
   render();
 });
 
