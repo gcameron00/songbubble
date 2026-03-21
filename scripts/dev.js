@@ -19,10 +19,10 @@ try {
   // No .dev.vars — that's fine in CI / production
 }
 
-const proc = spawn('npx', ['wrangler', 'pages', 'dev', '.'], {
-  stdio: 'inherit',
-  env: process.env,
-  shell: true,
-});
+const proc = spawn(
+  process.platform === 'win32' ? 'npx.cmd' : 'npx',
+  ['wrangler', 'pages', 'dev', '.'],
+  { stdio: 'inherit', env: process.env },
+);
 
 proc.on('exit', code => process.exit(code ?? 0));
