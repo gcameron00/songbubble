@@ -14,6 +14,7 @@ function base64urlStr(str: string): string {
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  try {
   const now = Math.floor(Date.now() / 1000);
   const exp = now + 15_777_000; // 6 months in seconds
 
@@ -49,4 +50,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   return Response.json({ token }, {
     headers: { 'Cache-Control': 'private, max-age=3600' },
   });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: msg, keyLength: env.APPLE_MUSIC_PRIVATE_KEY?.length ?? 0 }, { status: 500 });
+  }
 };
