@@ -13,6 +13,7 @@ npm-debug.log*
 # Environment / secrets
 .env
 .env.local
+.dev.vars
 
 # Wrangler local dev state (local D1 database, temp build bundles)
 .wrangler/

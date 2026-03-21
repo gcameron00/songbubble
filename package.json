@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler pages dev .",
+    "dev": "node scripts/dev.js",
     "deploy": "wrangler pages deploy .",
     "db:create": "wrangler d1 create songbubble-db",
     "db:migrate:local": "wrangler d1 migrations apply songbubble-db --local",
