@@ -1,7 +1,7 @@
 # SongBubble
 
 SongBubble is a community-driven song voting site that surfaces what people are listening to and loving right now. Users nominate songs and vote for their current favourites; votes fade over time so the chart stays fresh.
-
+ 
 **How it works**
 
 - Users nominate songs (title, artist, optional album)
@@ -12,7 +12,7 @@ SongBubble is a community-driven song voting site that surfaces what people are 
 
 **Planned features**
 
-- Music catalogue search via Apple Music and Spotify — find songs without typing manually
+- Music catalogue search via Apple Music (in progress) and Spotify — find songs without typing manually
 - Playback integration for users with Apple Music or Spotify accounts
 
 See [documents/apple-music-integration.md](documents/apple-music-integration.md) for the Apple Music integration design.
