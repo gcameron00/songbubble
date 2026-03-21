@@ -24,10 +24,17 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   // Strip PEM envelope and whitespace to get the raw base64 key bytes.
   const pemBody = env.APPLE_MUSIC_PRIVATE_KEY
-    .replace(/-----BEGIN PRIVATE KEY-----/, '')
-    .replace(/-----END PRIVATE KEY-----/, '')
-    .replace(/\\n/g, '')   // literal \n from .dev.vars dotenv format
-    .replace(/\s+/g, '');  // actual whitespace / newlines
+    .replace(/^["']|["']$/g, '')           // outer quotes if pasted literally
+    .replace(/-----BEGIN[^-]+-----/g, '')  // any BEGIN header variant
+    .replace(/-----END[^-]+-----/g, '')    // any END header variant
+    .replace(/\\n/g, '')                   // literal \n (from dotenv)
+    .replace(/\s+/g, '');                  // real whitespace / newlines
+
+  // Temporary diagnostic — remove once key format is confirmed
+  if (!/^[A-Za-z0-9+/]+=*$/.test(pemBody)) {
+    const badChars = [...new Set(pemBody.replace(/[A-Za-z0-9+/=]/g, ''))].join('');
+    return Response.json({ error: 'Invalid chars after strip', badChars, first30: pemBody.slice(0, 30), length: pemBody.length }, { status: 500 });
+  }
 
   const keyBytes = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
 
