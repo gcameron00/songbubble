@@ -22,7 +22,7 @@ const SCORE_FRAGMENT = `
 // Each vote contributes its own decayed value so fresh votes always count more
 // than old ones, regardless of when other votes were cast.
 const LEADERBOARD_SQL = `
-  SELECT s.id, s.title, s.artist, s.album, s.created_at, ${SCORE_FRAGMENT}
+  SELECT s.id, s.title, s.artist, s.album, s.apple_music_id, s.artwork_url, s.created_at, ${SCORE_FRAGMENT}
   FROM songs s
   LEFT JOIN votes v ON v.song_id = s.id
   GROUP BY s.id
@@ -31,7 +31,7 @@ const LEADERBOARD_SQL = `
 `;
 
 const SEARCH_SQL = `
-  SELECT s.id, s.title, s.artist, s.album, s.created_at, ${SCORE_FRAGMENT}
+  SELECT s.id, s.title, s.artist, s.album, s.apple_music_id, s.artwork_url, s.created_at, ${SCORE_FRAGMENT}
   FROM songs s
   LEFT JOIN votes v ON v.song_id = s.id
   WHERE LOWER(s.title)  LIKE '%' || LOWER(?) || '%'
@@ -69,25 +69,41 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { title, artist, album } = body as Record<string, string>;
+  const { title, artist, album, apple_music_id, artwork_url } = body as Record<string, string>;
+
+  // If submitted from Apple Music catalogue, check for an existing record first.
+  if (apple_music_id) {
+    const existing = await env.DB.prepare(
+      'SELECT id, title, artist, album FROM songs WHERE apple_music_id = ?',
+    ).bind(apple_music_id).first<{ id: number; title: string; artist: string; album: string | null }>();
+
+    if (existing) {
+      return Response.json({
+        id: existing.id,
+        song: { id: existing.id, title: existing.title, artist: existing.artist, album: existing.album, score: 0, apple_music_id },
+      });
+    }
+  }
 
   const errors = validateSubmission(title ?? '', artist ?? '', album ?? '');
   if (errors.length > 0) {
     return Response.json({ errors }, { status: 422 });
   }
 
-  const t = title.trim();
-  const a = artist.trim();
+  const t  = title.trim();
+  const a  = artist.trim();
   const al = album?.trim() || null;
+  const am = apple_music_id?.trim() || null;
+  const aw = artwork_url?.trim() || null;
 
   const { meta } = await env.DB.prepare(
-    'INSERT INTO songs (title, artist, album) VALUES (?, ?, ?)',
+    'INSERT INTO songs (title, artist, album, apple_music_id, artwork_url) VALUES (?, ?, ?, ?, ?)',
   )
-    .bind(t, a, al)
+    .bind(t, a, al, am, aw)
     .run();
 
   return Response.json(
-    { id: meta.last_row_id, song: { id: meta.last_row_id, title: t, artist: a, album: al, score: 0 } },
+    { id: meta.last_row_id, song: { id: meta.last_row_id, title: t, artist: a, album: al, score: 0, apple_music_id: am } },
     { status: 201 },
   );
 };
