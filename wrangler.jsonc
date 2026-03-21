@@ -6,6 +6,13 @@
   // Serve the static site from the repo root (no build step).
   "pages_build_output_dir": ".",
 
+  "vars": {
+    "APPLE_TEAM_ID": "5WLAHPJN66",
+    "APPLE_KEY_ID": "QR5VJNJJB8",
+    "APPLE_MUSIC_ORIGIN": "https://songbubble.pages.dev"
+    // Production: use `wrangler pages secret put APPLE_MUSIC_PRIVATE_KEY`
+  },
+
   "d1_databases": [
     {
       // The binding name used in Functions: env.DB
