@@ -1,3 +1,15 @@
+/**
+ * SongBubble — main.js
+ *
+ * Chart mode:   shows top-10 with rank, loaded at boot.
+ * Search mode:  unified list of DB + Apple Music results, no ranks.
+ *               Voting an Apple Music song silently upserts it to the DB first.
+ *
+ * localStorage keys:
+ *   sb_voted   — { [songId]: dateString }
+ *   sb_budget  — { used: number, day: string }
+ */
+
 'use strict';
 
 const VOTES_PER_DAY = 5;
@@ -5,10 +17,9 @@ const LS_VOTED      = 'sb_voted';
 const LS_BUDGET     = 'sb_budget';
 
 // ── App state ─────────────────────────────────────────────────────────────────
-let allSongs     = [];   // top-10 chart, loaded at boot
-let searchQuery  = '';
-let searchResults = null; // DB search results, or null when chart is shown
-let appleResults  = null; // Apple Music catalogue results, or null
+let allSongs      = [];   // top-10 chart
+let searchQuery   = '';
+let mergedResults = null; // unified search list, or null in chart mode
 
 // ── MusicKit ──────────────────────────────────────────────────────────────────
 let musicKit = null;
@@ -42,6 +53,28 @@ async function searchAppleMusic(q) {
   } catch { return []; }
 }
 
+// Normalise an Apple Music catalogue item into the same shape as a DB song.
+// id: null signals it is not yet in our DB.
+function normalizeAppleItem(item) {
+  const attr = item.attributes ?? {};
+  return {
+    id:             null,
+    _appleItem:     item,
+    title:          attr.name       ?? '',
+    artist:         attr.artistName ?? '',
+    album:          attr.albumName  ?? '',
+    artwork_url:    attr.artwork?.url ?? null,
+    apple_music_id: item.id,
+    score:          0,
+  };
+}
+
+// Resolve Apple Music artwork template URL (replaces {w}/{h} placeholders).
+function resolveArtwork(url, size = 56) {
+  if (!url) return null;
+  return url.replace('{w}', size).replace('{h}', size);
+}
+
 // ── localStorage helpers ──────────────────────────────────────────────────────
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -61,7 +94,7 @@ function saveVoted(voted) {
 }
 
 function loadBudget() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   try {
     const b = JSON.parse(localStorage.getItem(LS_BUDGET));
     if (b?.day === today) return b;
@@ -189,8 +222,11 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// rank: number for chart mode, null for search mode (no rank shown).
+// Songs with id === null are Apple Music-only and not yet in the DB.
 function buildCard(song, rank, voted, hasVoteBudget) {
-  const voteDate        = voted[song.id];
+  const isNewSong       = song.id === null;
+  const voteDate        = !isNewSong ? voted[song.id] : undefined;
   const votedToday      = voteDate === todayIso();
   const previouslyVoted = voteDate !== undefined && !votedToday;
   const canVote         = hasVoteBudget && !votedToday;
@@ -198,7 +234,9 @@ function buildCard(song, rank, voted, hasVoteBudget) {
 
   const li = document.createElement('li');
   li.className = 'song-card';
-  li.dataset.id = song.id;
+  if (!isNewSong) li.dataset.id = song.id;
+
+  const thumb = resolveArtwork(song.artwork_url);
 
   const voteIcon = retractable
     ? '<span class="icon-default">♥</span><span class="icon-hover">✕</span>'
@@ -213,65 +251,30 @@ function buildCard(song, rank, voted, hasVoteBudget) {
   if (retractable)          btnClass += ' voted retractable';
   else if (previouslyVoted) btnClass += ' previously-voted';
 
+  const btnEnabled = isNewSong ? hasVoteBudget : (canVote || retractable);
+
   li.innerHTML = `
-    <span class="rank ${rankClass(rank)}" aria-label="Rank ${rank}">${rankLabel(rank)}</span>
+    ${rank !== null ? `<span class="rank ${rankClass(rank)}" aria-label="Rank ${rank}">${rankLabel(rank)}</span>` : ''}
+    ${thumb ? `<img class="song-thumb" src="${escHtml(thumb)}" alt="" aria-hidden="true" width="56" height="56">` : ''}
     <div class="song-body">
       <p class="song-title">${escHtml(song.title)}</p>
       <p class="song-meta"><strong>${escHtml(song.artist)}</strong>${song.album ? ` &mdash; ${escHtml(song.album)}` : ''}</p>
     </div>
-    <button
-      class="${btnClass}"
-      aria-label="${btnLabel}"
-      aria-pressed="${retractable}"
-      ${canVote || retractable ? '' : 'disabled'}
-    >
+    <button class="${btnClass}" aria-label="${btnLabel}" aria-pressed="${retractable}" ${btnEnabled ? '' : 'disabled'}>
       <span class="vote-icon" aria-hidden="true">${voteIcon}</span>
       <span class="vote-count">${fmtScore(song.score)}</span>
     </button>
   `;
 
+  const btn = li.querySelector('.vote-btn');
   if (retractable) {
-    li.querySelector('.vote-btn').addEventListener('click', () => retractVote(song.id));
+    btn.addEventListener('click', () => retractVote(song.id));
+  } else if (isNewSong && hasVoteBudget) {
+    btn.addEventListener('click', () => addThenVote(song, li));
   } else if (canVote) {
-    li.querySelector('.vote-btn').addEventListener('click', () => castVote(song.id));
+    btn.addEventListener('click', () => castVote(song.id));
   }
 
-  return li;
-}
-
-function artworkUrl(item, size = 50) {
-  const url = item.attributes?.artwork?.url;
-  if (!url) return null;
-  return url.replace('{w}', size).replace('{h}', size);
-}
-
-function buildAppleCard(item) {
-  const attr  = item.attributes ?? {};
-  const title  = attr.name       ?? '';
-  const artist = attr.artistName ?? '';
-  const album  = attr.albumName  ?? '';
-  const thumb  = artworkUrl(item, 50);
-
-  const li = document.createElement('li');
-  li.className = 'song-card apple-card';
-
-  li.innerHTML = `
-    ${thumb ? `<img class="apple-thumb" src="${escHtml(thumb)}" alt="" aria-hidden="true" width="50" height="50">` : '<span class="apple-thumb-placeholder"></span>'}
-    <div class="song-body">
-      <p class="song-title">${escHtml(title)}</p>
-      <p class="song-meta"><strong>${escHtml(artist)}</strong>${album ? ` &mdash; ${escHtml(album)}` : ''}</p>
-    </div>
-    <button class="add-btn" aria-label="Add ${escHtml(title)} to SongBubble">+ Add</button>
-  `;
-
-  li.querySelector('.add-btn').addEventListener('click', () => selectAppleMusicSong(item, li));
-  return li;
-}
-
-function groupHeader(text) {
-  const li = document.createElement('li');
-  li.className = 'results-group-label';
-  li.textContent = text;
   return li;
 }
 
@@ -289,7 +292,7 @@ function render(skipEntrance = false) {
   list.innerHTML = '';
 
   if (!searchQuery) {
-    // Chart mode — show top-10
+    // Chart mode — ranked top-10
     if (allSongs.length === 0) { noResults.classList.remove('hidden'); return; }
     noResults.classList.add('hidden');
     allSongs.forEach((song, i) => {
@@ -301,83 +304,78 @@ function render(skipEntrance = false) {
     return;
   }
 
-  // Search mode — two sections
-  const dbSongs = searchResults ?? [];
-  const amSongs = appleResults  ?? [];
-
-  if (dbSongs.length === 0 && amSongs.length === 0) {
-    noResults.classList.remove('hidden');
-    return;
-  }
+  // Search mode — unified list, no ranks
+  const songs = mergedResults ?? [];
+  if (songs.length === 0) { noResults.classList.remove('hidden'); return; }
   noResults.classList.add('hidden');
-
-  if (dbSongs.length > 0) {
-    if (amSongs.length > 0) list.appendChild(groupHeader('In SongBubble'));
-    dbSongs.forEach((song, i) => {
-      const card = buildCard(song, i + 1, voted, remaining > 0);
-      if (skipEntrance) card.style.animation = 'none';
-      list.appendChild(card);
-    });
-  }
-
-  if (amSongs.length > 0) {
-    list.appendChild(groupHeader('From Apple Music'));
-    amSongs.forEach(item => list.appendChild(buildAppleCard(item)));
-  }
+  songs.forEach(song => list.appendChild(buildCard(song, null, voted, remaining > 0)));
 }
 
-// ── Apple Music song selection ────────────────────────────────────────────────
-async function selectAppleMusicSong(item, li) {
-  const btn  = li.querySelector('.add-btn');
-  btn.disabled    = true;
-  btn.textContent = 'Adding…';
+// ── Voting ────────────────────────────────────────────────────────────────────
 
-  const attr = item.attributes ?? {};
+// Add an Apple Music song to the DB, then immediately cast a vote for it.
+async function addThenVote(song, li) {
+  const btn = li.querySelector('.vote-btn');
+  btn.disabled = true;
+
   try {
     const res  = await fetch('/api/songs', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title:          attr.name       ?? '',
-        artist:         attr.artistName ?? '',
-        album:          attr.albumName  ?? '',
-        apple_music_id: item.id,
-        artwork_url:    attr.artwork?.url ?? null,
+        title:          song.title,
+        artist:         song.artist,
+        album:          song.album,
+        apple_music_id: song.apple_music_id,
+        artwork_url:    song.artwork_url,
       }),
     });
     const data = await res.json();
-    if (!res.ok && res.status !== 200) throw new Error(data.error ?? 'Failed');
+    if (!res.ok) throw new Error(data.error ?? 'Failed');
 
-    const song = data.song;
-    // Move from Apple results to DB results
-    appleResults  = (appleResults ?? []).filter(s => s.id !== item.id);
-    searchResults = [...(searchResults ?? []), song];
-    allSongs.push(song);
-    allSongs.sort((a, b) => b.score - a.score);
-    document.dispatchEvent(new CustomEvent('song-added', { detail: song }));
-    render();
+    const dbSong = data.song;
+
+    // Replace the Apple Music stub with the real DB entry in mergedResults.
+    if (mergedResults) {
+      const idx = mergedResults.findIndex(
+        s => s.apple_music_id === song.apple_music_id && s.id === null,
+      );
+      if (idx !== -1) mergedResults[idx] = { ...dbSong };
+    }
+    if (!allSongs.find(s => s.id === dbSong.id)) {
+      allSongs.push(dbSong);
+      allSongs.sort((a, b) => b.score - a.score);
+    }
+
+    await castVote(dbSong.id);
   } catch {
-    btn.disabled    = false;
-    btn.textContent = '+ Add';
+    btn.disabled = false;
   }
 }
 
-// ── Voting ────────────────────────────────────────────────────────────────────
 async function castVote(songId) {
   const budget = loadBudget();
   const voted  = loadVoted();
   if (budget.used >= VOTES_PER_DAY || voted[songId] === todayIso()) return;
 
-  const previousDate = voted[songId];
-
+  const previousDate  = voted[songId];
   const prevPositions = searchQuery ? null : capturePositions();
+
   voted[songId] = todayIso();
   budget.used += 1;
   saveVoted(voted);
   saveBudget(budget);
+
   const song = allSongs.find(s => s.id === songId);
   if (song) song.score += 1;
   allSongs.sort((a, b) => b.score - a.score);
+
+  // Also update score in mergedResults so it re-renders correctly.
+  if (mergedResults) {
+    const s = mergedResults.find(s => s.id === songId);
+    if (s) s.score += 1;
+  }
+
   render(!!prevPositions);
   if (prevPositions) flipAnimate(prevPositions);
 
@@ -389,6 +387,10 @@ async function castVote(songId) {
     saveVoted(voted);
     saveBudget(budget);
     if (song) song.score = Math.max(0, song.score - 1);
+    if (mergedResults) {
+      const s = mergedResults.find(s => s.id === songId);
+      if (s) s.score = Math.max(0, s.score - 1);
+    }
     allSongs.sort((a, b) => b.score - a.score);
     if (status === 429) { budget.used = VOTES_PER_DAY; saveBudget(budget); }
     render(true);
@@ -401,13 +403,20 @@ async function retractVote(songId) {
   if (voted[songId] !== todayIso()) return;
 
   const prevPositions = searchQuery ? null : capturePositions();
+
   delete voted[songId];
   budget.used = Math.max(0, budget.used - 1);
   saveVoted(voted);
   saveBudget(budget);
+
   const song = allSongs.find(s => s.id === songId);
   if (song) song.score = Math.max(0, song.score - 1);
+  if (mergedResults) {
+    const s = mergedResults.find(s => s.id === songId);
+    if (s) s.score = Math.max(0, s.score - 1);
+  }
   allSongs.sort((a, b) => b.score - a.score);
+
   render(!!prevPositions);
   if (prevPositions) flipAnimate(prevPositions);
 
@@ -418,6 +427,10 @@ async function retractVote(songId) {
     saveVoted(voted);
     saveBudget(budget);
     if (song) song.score += 1;
+    if (mergedResults) {
+      const s = mergedResults.find(s => s.id === songId);
+      if (s) s.score += 1;
+    }
     allSongs.sort((a, b) => b.score - a.score);
     render(true);
   }
@@ -433,23 +446,26 @@ function initSearch() {
   async function runSearch(q) {
     searchQuery = q;
     if (!q) {
-      searchResults = null;
-      appleResults  = null;
+      mergedResults = null;
       render();
       return;
     }
-    render(); // Show stale results while fetching
+    render();
 
-    const [dbRes, amRes] = await Promise.all([
+    const [dbSongs, amItems] = await Promise.all([
       searchSongs(q),
       searchAppleMusic(q),
     ]);
-    if (q !== searchQuery) return; // Stale — a newer query is in flight
+    if (q !== searchQuery) return;
 
-    // Filter Apple Music results already in the DB (matched by apple_music_id)
-    const dbAmIds = new Set(dbRes.map(s => s.apple_music_id).filter(Boolean));
-    searchResults = dbRes;
-    appleResults  = amRes.filter(s => !dbAmIds.has(s.id));
+    // Filter Apple Music items already in the DB (matched by apple_music_id).
+    const dbAmIds = new Set(dbSongs.map(s => s.apple_music_id).filter(Boolean));
+    const amSongs = amItems
+      .filter(item => !dbAmIds.has(item.id))
+      .map(normalizeAppleItem);
+
+    // DB results first (by score), Apple Music after.
+    mergedResults = [...dbSongs, ...amSongs];
     render();
   }
 
@@ -474,9 +490,9 @@ document.addEventListener('song-added', (e) => {
     allSongs.push(song);
     allSongs.sort((a, b) => b.score - a.score);
   }
-  if (searchResults && !searchResults.find(s => s.id === song.id)) {
-    searchResults.push(song);
-    searchResults.sort((a, b) => b.score - a.score);
+  if (mergedResults && !mergedResults.find(s => s.id === song.id)) {
+    mergedResults.push(song);
+    mergedResults.sort((a, b) => b.score - a.score);
   }
   render();
 });
@@ -484,7 +500,7 @@ document.addEventListener('song-added', (e) => {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   initSearch();
-  initMusicKit(); // Non-blocking — search degrades gracefully if MusicKit fails
+  initMusicKit();
 
   document.getElementById('chart-list').innerHTML =
     '<li class="no-results">Loading…</li>';
