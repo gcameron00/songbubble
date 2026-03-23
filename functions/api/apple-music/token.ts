@@ -30,12 +30,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     .replace(/\\n/g, '')                   // literal \n (from dotenv)
     .replace(/\s+/g, '');                  // real whitespace / newlines
 
-  // Temporary diagnostic — remove once key format is confirmed
-  if (!/^[A-Za-z0-9+/]+=*$/.test(pemBody)) {
-    const badChars = [...new Set(pemBody.replace(/[A-Za-z0-9+/=]/g, ''))].join('');
-    return Response.json({ error: 'Invalid chars after strip', badChars, first30: pemBody.slice(0, 30), length: pemBody.length }, { status: 500 });
-  }
-
   const keyBytes = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
 
   const privateKey = await crypto.subtle.importKey(
