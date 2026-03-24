@@ -21,6 +21,10 @@ let allSongs      = [];   // top-10 chart
 let searchQuery   = '';
 let mergedResults = null; // unified search list, or null in chart mode
 
+// ── Playback state ────────────────────────────────────────────────────────────
+// amId: the apple_music_id of the active song (or null); state: idle|loading|playing|paused
+const playback = { amId: null, state: 'idle' };
+
 // ── MusicKit ──────────────────────────────────────────────────────────────────
 let musicKit = null;
 
@@ -36,6 +40,19 @@ async function initMusicKit() {
     musicKit = await MusicKit.configure({
       developerToken: token,
       app: { name: 'SongBubble', build: '1.0.0' },
+    });
+
+    // Sync playback state to UI without a full re-render
+    musicKit.addEventListener('playbackStateDidChange', () => {
+      const s = musicKit.playbackState;
+      if      (s === 2)                  playback.state = 'playing';
+      else if (s === 3)                  playback.state = 'paused';
+      else if (s === 1)                  playback.state = 'loading';
+      else if (s === 0 || s === 4 || s === 5) {
+        playback.amId  = null;
+        playback.state = 'idle';
+      }
+      updatePlayUI();
     });
   } catch (err) {
     console.warn('MusicKit unavailable:', err);
@@ -171,6 +188,55 @@ function reconcileVotes({ voted_today, voted_ever }) {
   saveBudget({ used: voted_today.length, day: today });
 }
 
+// ── Playback ──────────────────────────────────────────────────────────────────
+
+async function playOrPause(song) {
+  if (!musicKit || !song.apple_music_id) return;
+  const amId = song.apple_music_id;
+
+  if (playback.amId === amId) {
+    if (playback.state === 'playing') { musicKit.pause(); return; }
+    if (playback.state === 'paused')  { musicKit.play();  return; }
+  }
+
+  playback.amId  = amId;
+  playback.state = 'loading';
+  updatePlayUI();
+
+  try {
+    await musicKit.authorize();
+    await musicKit.setQueue({ song: amId });
+    await musicKit.play();
+  } catch {
+    playback.amId  = null;
+    playback.state = 'idle';
+    updatePlayUI();
+  }
+}
+
+// Update only the play overlays in the DOM — avoids a full re-render during playback.
+function updatePlayUI() {
+  document.querySelectorAll('.thumb-wrap[data-am-id]').forEach(wrap => {
+    const isActive  = wrap.dataset.amId === playback.amId;
+    const isPlaying = isActive && playback.state === 'playing';
+    const isLoading = isActive && playback.state === 'loading';
+    wrap.classList.toggle('is-playing', isPlaying);
+    wrap.classList.toggle('is-loading', isLoading);
+    const overlay = wrap.querySelector('.play-overlay');
+    if (!overlay) return;
+    if (isLoading) {
+      overlay.innerHTML = '<span class="play-spinner" aria-hidden="true"></span>';
+      overlay.setAttribute('aria-label', 'Loading\u2026');
+    } else if (isPlaying) {
+      overlay.textContent = '\u23f8';
+      overlay.setAttribute('aria-label', 'Pause');
+    } else {
+      overlay.textContent = '\u25b6';
+      overlay.setAttribute('aria-label', 'Play');
+    }
+  });
+}
+
 // ── FLIP animation ────────────────────────────────────────────────────────────
 function capturePositions() {
   const map = new Map();
@@ -238,6 +304,25 @@ function buildCard(song, rank, voted, hasVoteBudget) {
 
   const thumb = resolveArtwork(song.artwork_url);
 
+  // Build thumb / play-overlay area
+  let thumbHtml = '';
+  if (song.apple_music_id) {
+    const isThisPlaying = song.apple_music_id === playback.amId;
+    const ps        = isThisPlaying ? playback.state : 'idle';
+    const isPlaying = ps === 'playing';
+    const isLoading = ps === 'loading';
+    const wrapClass = 'thumb-wrap' + (isPlaying ? ' is-playing' : '') + (isLoading ? ' is-loading' : '');
+    const imgHtml   = thumb
+      ? `<img class="song-thumb" src="${escHtml(thumb)}" alt="" aria-hidden="true" width="56" height="56">`
+      : `<div class="song-thumb thumb-placeholder" aria-hidden="true"></div>`;
+    const overlayContent = isLoading
+      ? '<span class="play-spinner" aria-hidden="true"></span>'
+      : (isPlaying ? '\u23f8' : '\u25b6');
+    thumbHtml = `<div class="${wrapClass}" data-am-id="${escHtml(song.apple_music_id)}">${imgHtml}<button class="play-overlay" aria-label="${isPlaying ? 'Pause' : 'Play'} ${escHtml(song.title)}">${overlayContent}</button></div>`;
+  } else if (thumb) {
+    thumbHtml = `<img class="song-thumb" src="${escHtml(thumb)}" alt="" aria-hidden="true" width="56" height="56">`;
+  }
+
   const voteIcon = retractable
     ? '<span class="icon-default">♥</span><span class="icon-hover">✕</span>'
     : '♡';
@@ -255,7 +340,7 @@ function buildCard(song, rank, voted, hasVoteBudget) {
 
   li.innerHTML = `
     ${rank !== null ? `<span class="rank ${rankClass(rank)}" aria-label="Rank ${rank}">${rankLabel(rank)}</span>` : ''}
-    ${thumb ? `<img class="song-thumb" src="${escHtml(thumb)}" alt="" aria-hidden="true" width="56" height="56">` : ''}
+    ${thumbHtml}
     <div class="song-body">
       <p class="song-title">${escHtml(song.title)}</p>
       <p class="song-meta"><strong>${escHtml(song.artist)}</strong>${song.album ? ` &mdash; ${escHtml(song.album)}` : ''}</p>
@@ -274,6 +359,9 @@ function buildCard(song, rank, voted, hasVoteBudget) {
   } else if (canVote) {
     btn.addEventListener('click', () => castVote(song.id));
   }
+
+  const playOverlay = li.querySelector('.play-overlay');
+  if (playOverlay) playOverlay.addEventListener('click', () => playOrPause(song));
 
   return li;
 }
