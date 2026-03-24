@@ -293,9 +293,10 @@ function render(skipEntrance = false) {
 
   if (!searchQuery) {
     // Chart mode — ranked top-10
-    if (allSongs.length === 0) { noResults.classList.remove('hidden'); return; }
+    const chartSongs = allSongs.slice(0, 10);
+    if (chartSongs.length === 0) { noResults.classList.remove('hidden'); return; }
     noResults.classList.add('hidden');
-    allSongs.forEach((song, i) => {
+    chartSongs.forEach((song, i) => {
       const card = buildCard(song, i + 1, voted, remaining > 0);
       if (skipEntrance) card.style.animation = 'none';
       else card.style.animationDelay = `${i * 30}ms`;
@@ -438,13 +439,23 @@ async function retractVote(songId) {
 
 // ── Search ────────────────────────────────────────────────────────────────────
 function initSearch() {
-  const form  = document.getElementById('search-form');
-  const input = document.getElementById('search-input');
+  const form     = document.getElementById('search-form');
+  const input    = document.getElementById('search-input');
+  const backdrop = document.getElementById('search-backdrop');
 
   let debounce;
 
+  function closeSearch() {
+    input.value = '';
+    input.dispatchEvent(new Event('input')); // notify submit.js to hide its prompt
+    runSearch('');
+    input.blur();
+  }
+
   async function runSearch(q) {
     searchQuery = q;
+    document.body.classList.toggle('is-searching', !!q);
+
     if (!q) {
       mergedResults = null;
       render();
@@ -475,11 +486,17 @@ function initSearch() {
     debounce = setTimeout(() => runSearch(q), 200);
   });
 
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeSearch();
+  });
+
   form.addEventListener('submit', e => {
     e.preventDefault();
     clearTimeout(debounce);
     runSearch(input.value.trim());
   });
+
+  backdrop.addEventListener('click', closeSearch);
 }
 
 // ── Song submission ───────────────────────────────────────────────────────────

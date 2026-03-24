@@ -39,6 +39,15 @@
           <div class="bt-stat"><span class="bt-stat-val" id="s-votes">—</span><span class="bt-stat-label">Total votes</span></div>
           <div class="bt-stat"><span class="bt-stat-val" id="s-today">—</span><span class="bt-stat-label">Votes today</span></div>
           <div class="bt-stat"><span class="bt-stat-val" id="s-fp">—</span><span class="bt-stat-label">Unique users</span></div>
+          <div class="bt-stat" id="s-no-am-wrap"><span class="bt-stat-val" id="s-no-am">—</span><span class="bt-stat-label">Missing AM ID</span></div>
+        </div>
+      </section>
+
+      <!-- ── Vote activity ───────────────────────────────────── -->
+      <section style="margin-bottom: 2.5rem;">
+        <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem; color: var(--muted); text-transform:uppercase; letter-spacing:.05em;">Vote activity <span style="font-weight:400;text-transform:none;letter-spacing:0">(last 28 days)</span></h2>
+        <div class="bt-activity" id="activity">
+          <div class="bt-activity-loading">Loading&hellip;</div>
         </div>
       </section>
 
@@ -114,6 +123,10 @@
             document.getElementById('s-votes').textContent  = d.votes_count;
             document.getElementById('s-today').textContent  = d.votes_today;
             document.getElementById('s-fp').textContent     = d.unique_fingerprints;
+            const noAm = d.no_apple_music_id;
+            const noAmEl = document.getElementById('s-no-am');
+            noAmEl.textContent = noAm;
+            noAmEl.style.color = noAm === 0 ? 'var(--success, #16a34a)' : '#d97706';
           })
           .catch(() => {
             document.getElementById('stats').textContent = 'Could not load stats.';
@@ -172,7 +185,35 @@
         }
       }
 
+      async function loadActivity() {
+        const container = document.getElementById('activity');
+        try {
+          const data = await fetch('/api/debug/activity').then(r => r.json());
+          const max  = Math.max(1, ...data.map(d => d.count));
+          const today = new Date().toISOString().slice(0, 10);
+
+          container.innerHTML = `
+            <div class="bt-activity-chart">
+              ${data.map(d => {
+                const pct     = Math.round((d.count / max) * 100);
+                const isToday = d.vote_day === today;
+                const label   = d.vote_day.slice(5);
+                return `
+                  <div class="bt-bar-wrap${isToday ? ' bt-bar-today' : ''}" title="${d.vote_day}: ${d.count} vote${d.count === 1 ? '' : 's'}">
+                    <div class="bt-bar" style="height:${pct}%"></div>
+                    <span class="bt-bar-label">${label}</span>
+                  </div>`;
+              }).join('')}
+            </div>
+            <p class="bt-activity-note">Peak: ${max} vote${max === 1 ? '' : 's'} in a day</p>
+          `;
+        } catch {
+          container.textContent = 'Could not load activity.';
+        }
+      }
+
       loadStats();
+      loadActivity();
     </script>
   </body>
 </html>

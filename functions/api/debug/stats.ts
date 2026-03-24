@@ -5,7 +5,7 @@
 import type { Env } from '../../env.d.ts';
 
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
-  const [songs, votes, votesToday, fingerprints] = await Promise.all([
+  const [songs, votes, votesToday, fingerprints, noAmId] = await Promise.all([
     env.DB.prepare('SELECT COUNT(*) AS n FROM songs').first<{ n: number }>(),
     env.DB.prepare('SELECT COUNT(*) AS n FROM votes').first<{ n: number }>(),
     env.DB.prepare(
@@ -14,6 +14,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     env.DB.prepare(
       'SELECT COUNT(DISTINCT fingerprint) AS n FROM votes',
     ).first<{ n: number }>(),
+    env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM songs WHERE apple_music_id IS NULL OR apple_music_id = ''",
+    ).first<{ n: number }>(),
   ]);
 
   return Response.json({
@@ -21,5 +24,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     votes_count:         votes?.n         ?? 0,
     votes_today:         votesToday?.n    ?? 0,
     unique_fingerprints: fingerprints?.n  ?? 0,
+    no_apple_music_id:   noAmId?.n        ?? 0,
   });
 };

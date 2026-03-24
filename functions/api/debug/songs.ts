@@ -1,5 +1,5 @@
 /**
- * GET /api/debug/songs?page=1
+ * GET /api/debug/songs?page=1&sort=id&order=asc
  * Returns all songs (ordered by id) with their current decay-weighted score.
  * Debug use only — not linked from the public chart.
  */
@@ -8,10 +8,23 @@ import type { Env } from '../../env.d.ts';
 const PER_PAGE      = 25;
 const DECAY_SECONDS = 28 * 24 * 60 * 60;
 
+const SORT_COLS: Record<string, string> = {
+  id:             's.id',
+  title:          's.title',
+  artist:         's.artist',
+  album:          's.album',
+  score:          'score',
+  created_at:     's.created_at',
+  apple_music_id: 's.apple_music_id',
+  artwork_url:    's.artwork_url',
+};
+
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const url    = new URL(request.url);
   const page   = Math.max(1, parseInt(url.searchParams.get('page') ?? '1'));
   const offset = (page - 1) * PER_PAGE;
+  const sort   = SORT_COLS[url.searchParams.get('sort') ?? ''] ?? 's.id';
+  const order  = url.searchParams.get('order') === 'desc' ? 'DESC' : 'ASC';
 
   const [{ results }, { results: countRows }] = await Promise.all([
     env.DB.prepare(`
@@ -20,6 +33,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         s.title,
         s.artist,
         s.album,
+        s.apple_music_id,
+        s.artwork_url,
         s.created_at,
         CAST(ROUND(COALESCE(
           SUM(MAX(0.0, 1.0 - (unixepoch() - v.created_at) / CAST(? AS REAL))),
@@ -28,7 +43,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       FROM songs s
       LEFT JOIN votes v ON v.song_id = s.id
       GROUP BY s.id
-      ORDER BY s.id
+      ORDER BY ${sort} ${order}
       LIMIT ? OFFSET ?
     `).bind(DECAY_SECONDS, PER_PAGE, offset).all(),
 

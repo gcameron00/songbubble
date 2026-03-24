@@ -167,6 +167,42 @@ main.container { flex: 1; padding-block: 2rem; }
 }
 .search-btn:hover { color: var(--brand); }
 
+/* ── Search overlay ───────────────────────────────────────── */
+#search-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 5;
+  cursor: default;
+}
+body.is-searching #search-backdrop { display: block; }
+
+body.is-searching .search-section {
+  position: relative;
+  z-index: 6;
+  margin-bottom: 0;
+}
+body.is-searching .search-form {
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-color: var(--brand-light);
+  border-bottom-color: var(--border);
+  box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+}
+body.is-searching .chart-section {
+  position: relative;
+  z-index: 6;
+  background: var(--surface);
+  border: 1.5px solid var(--brand-light);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 0 0 3px rgba(124,58,237,.12), 0 8px 24px rgba(0,0,0,.15);
+  padding: 0.5rem 0.75rem 0.75rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+body.is-searching .chart-header { display: none; }
+
 /* ── Chart ────────────────────────────────────────────────── */
 .chart-header {
   display: flex;
@@ -544,9 +580,14 @@ main.container { flex: 1; padding-block: 2rem; }
 }
 .debug-table tr:last-child td { border-bottom: none; }
 .debug-table tr:hover td { background: var(--bg); }
-.debug-table .num  { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
-.debug-table .mono { font-family: ui-monospace, monospace; font-size: 0.8rem; color: var(--muted); }
+.debug-table .num   { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.debug-table .mono  { font-family: ui-monospace, monospace; font-size: 0.8rem; color: var(--muted); }
+.debug-table .check { text-align: center; }
 .debug-table .song-cell { max-width: 320px; }
+.debug-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.debug-table th.sortable:hover { color: #d97706; }
+.debug-table th.sort-active { color: #d97706; }
+.sort-indicator { font-size: 0.75rem; }
 
 .debug-pagination { display: flex; gap: 0.5rem; margin-top: 1rem; }
 .pg-btn {
@@ -695,6 +736,58 @@ main.container { flex: 1; padding-block: 2rem; }
   width: 13rem;
 }
 .bt-confirm-input:focus { outline: 2px solid #d97706; outline-offset: 1px; }
+
+/* ── BubbleTrouble activity chart ────────────────────────── */
+.bt-activity-loading { color: var(--muted); font-size: 0.85rem; }
+.bt-activity-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 190px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.75rem 3rem; /* 3rem bottom = label zone */
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.bt-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  position: relative;
+  cursor: default;
+}
+.bt-bar {
+  width: 100%;
+  min-height: 2px;
+  background: #d97706;
+  border-radius: 2px 2px 0 0;
+  transition: opacity 0.15s;
+}
+.bt-bar-wrap:hover .bt-bar { opacity: 0.7; }
+.bt-bar-today .bt-bar { background: var(--brand); }
+.bt-bar-label {
+  position: absolute;
+  bottom: 0;          /* sits at the floor of the bar area, pointing into the padding zone */
+  left: 50%;
+  font-size: 0.65rem;
+  color: var(--muted);
+  white-space: nowrap;
+  transform: rotate(45deg);
+  transform-origin: top left;
+  display: none;
+}
+/* Show labels only for 1st, 7th, 14th, 21st, 28th bars */
+.bt-bar-wrap:nth-child(1)  .bt-bar-label,
+.bt-bar-wrap:nth-child(7)  .bt-bar-label,
+.bt-bar-wrap:nth-child(14) .bt-bar-label,
+.bt-bar-wrap:nth-child(21) .bt-bar-label,
+.bt-bar-wrap:nth-child(28) .bt-bar-label { display: block; }
+.bt-activity-note { font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; }
 
 /* ── About page ───────────────────────────────────────────── */
 .about-content { max-width: 560px; }

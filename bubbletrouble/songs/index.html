@@ -28,22 +28,13 @@
         <h1>Songs table</h1>
         <span class="debug-badge">debug</span>
       </div>
-      <p class="debug-note">All songs ordered by ID. Score is the current decay-weighted vote total.</p>
+      <p class="debug-note">All songs. Score is the current decay-weighted vote total. Click a column header to sort.</p>
 
       <div id="status" class="debug-note">Loading&hellip;</div>
 
       <div class="debug-table-wrap">
         <table class="debug-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Artist</th>
-              <th>Album</th>
-              <th>Score</th>
-              <th>Added (UTC)</th>
-            </tr>
-          </thead>
+          <thead id="thead"><tr></tr></thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
@@ -58,11 +49,49 @@
     </footer>
 
     <script>
-      let currentPage = parseInt(new URLSearchParams(location.search).get('page') ?? '1');
+      const COLS = [
+        { key: 'id',             label: 'ID' },
+        { key: 'title',          label: 'Title' },
+        { key: 'artist',         label: 'Artist' },
+        { key: 'album',          label: 'Album' },
+        { key: 'score',          label: 'Score' },
+        { key: 'apple_music_id', label: 'AM' },
+        { key: 'artwork_url',    label: 'Art' },
+        { key: 'created_at',     label: 'Added (UTC)' },
+      ];
+
+      const params      = new URLSearchParams(location.search);
+      let currentPage   = Math.max(1, parseInt(params.get('page') ?? '1'));
+      let currentSort   = params.get('sort')  ?? 'id';
+      let currentOrder  = params.get('order') ?? 'asc';
+
+      function renderHeaders() {
+        const tr = document.querySelector('#thead tr');
+        tr.innerHTML = '';
+        for (const col of COLS) {
+          const th = document.createElement('th');
+          const isActive = currentSort === col.key;
+          th.className  = 'sortable' + (isActive ? ' sort-active' : '');
+          th.innerHTML  = col.label + (isActive ? `<span class="sort-indicator">${currentOrder === 'asc' ? ' \u2191' : ' \u2193'}</span>` : '');
+          th.addEventListener('click', () => {
+            if (currentSort === col.key) {
+              currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+              currentSort  = col.key;
+              currentOrder = 'asc';
+            }
+            currentPage = 1;
+            navigate(currentPage);
+          });
+          tr.appendChild(th);
+        }
+      }
 
       async function load(page) {
         document.getElementById('status').textContent = 'Loading\u2026';
-        const res  = await fetch(`/api/debug/songs?page=${page}`);
+        renderHeaders();
+
+        const res  = await fetch(`/api/debug/songs?page=${page}&sort=${currentSort}&order=${currentOrder}`);
         const data = await res.json();
 
         document.getElementById('status').textContent =
@@ -78,6 +107,8 @@
             <td>${esc(row.artist)}</td>
             <td>${esc(row.album ?? '\u2014')}</td>
             <td class="num">${row.score}</td>
+            <td class="mono check">${row.apple_music_id ? '\u2713' : '\u2014'}</td>
+            <td class="mono check">${row.artwork_url    ? '\u2713' : '\u2014'}</td>
             <td class="mono">${new Date(row.created_at * 1000).toISOString().slice(0, 19).replace('T', ' ')}</td>
           `;
           tbody.appendChild(tr);
@@ -107,7 +138,7 @@
 
       function navigate(page) {
         currentPage = page;
-        history.pushState(null, '', `?page=${page}`);
+        history.pushState(null, '', `?page=${page}&sort=${currentSort}&order=${currentOrder}`);
         load(page);
       }
 
@@ -118,7 +149,10 @@
       }
 
       window.addEventListener('popstate', () => {
-        currentPage = parseInt(new URLSearchParams(location.search).get('page') ?? '1');
+        const p      = new URLSearchParams(location.search);
+        currentPage  = Math.max(1, parseInt(p.get('page')  ?? '1'));
+        currentSort  = p.get('sort')  ?? 'id';
+        currentOrder = p.get('order') ?? 'asc';
         load(currentPage);
       });
 

@@ -28,22 +28,13 @@
         <h1>Votes table</h1>
         <span class="debug-badge">debug</span>
       </div>
-      <p class="debug-note">All votes, newest first. Fingerprints are truncated to the first 8 characters.</p>
+      <p class="debug-note">All votes. Fingerprints are truncated to the first 8 characters. Click a column header to sort.</p>
 
       <div id="status" class="debug-note">Loading&hellip;</div>
 
       <div class="debug-table-wrap">
         <table class="debug-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Song ID</th>
-              <th>Song</th>
-              <th>Fingerprint</th>
-              <th>Vote day</th>
-              <th>Created (UTC)</th>
-            </tr>
-          </thead>
+          <thead id="thead"><tr></tr></thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
@@ -58,11 +49,51 @@
     </footer>
 
     <script>
-      let currentPage = parseInt(new URLSearchParams(location.search).get('page') ?? '1');
+      const COLS = [
+        { key: 'id',          label: 'ID' },
+        { key: 'song_id',     label: 'Song ID' },
+        { key: null,          label: 'Song' },
+        { key: 'fingerprint', label: 'Fingerprint' },
+        { key: 'vote_day',    label: 'Vote day' },
+        { key: 'created_at',  label: 'Created (UTC)' },
+      ];
+
+      const params      = new URLSearchParams(location.search);
+      let currentPage   = Math.max(1, parseInt(params.get('page') ?? '1'));
+      let currentSort   = params.get('sort')  ?? 'id';
+      let currentOrder  = params.get('order') ?? 'desc';
+
+      function renderHeaders() {
+        const tr = document.querySelector('#thead tr');
+        tr.innerHTML = '';
+        for (const col of COLS) {
+          const th = document.createElement('th');
+          const isActive = col.key && currentSort === col.key;
+          if (col.key) {
+            th.className = 'sortable' + (isActive ? ' sort-active' : '');
+            th.innerHTML = col.label + (isActive ? `<span class="sort-indicator">${currentOrder === 'asc' ? ' \u2191' : ' \u2193'}</span>` : '');
+            th.addEventListener('click', () => {
+              if (currentSort === col.key) {
+                currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+              } else {
+                currentSort  = col.key;
+                currentOrder = 'desc';
+              }
+              currentPage = 1;
+              navigate(currentPage);
+            });
+          } else {
+            th.textContent = col.label;
+          }
+          tr.appendChild(th);
+        }
+      }
 
       async function load(page) {
         document.getElementById('status').textContent = 'Loading\u2026';
-        const res  = await fetch(`/api/debug/votes?page=${page}`);
+        renderHeaders();
+
+        const res  = await fetch(`/api/debug/votes?page=${page}&sort=${currentSort}&order=${currentOrder}`);
         const data = await res.json();
 
         document.getElementById('status').textContent =
@@ -107,7 +138,7 @@
 
       function navigate(page) {
         currentPage = page;
-        history.pushState(null, '', `?page=${page}`);
+        history.pushState(null, '', `?page=${page}&sort=${currentSort}&order=${currentOrder}`);
         load(page);
       }
 
@@ -118,7 +149,10 @@
       }
 
       window.addEventListener('popstate', () => {
-        currentPage = parseInt(new URLSearchParams(location.search).get('page') ?? '1');
+        const p      = new URLSearchParams(location.search);
+        currentPage  = Math.max(1, parseInt(p.get('page')  ?? '1'));
+        currentSort  = p.get('sort')  ?? 'id';
+        currentOrder = p.get('order') ?? 'desc';
         load(currentPage);
       });
 
