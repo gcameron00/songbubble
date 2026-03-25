@@ -48,7 +48,7 @@
 
       <section class="chart-section" aria-label="Top songs chart">
         <div class="chart-header">
-          <h2 class="chart-title">Top 10 right now</h2>
+          <h2 class="chart-title">Right now</h2>
           <span class="chart-meta" id="vote-budget-display"></span>
         </div>
         <ol class="chart-list" id="chart-list" aria-live="polite">
@@ -57,15 +57,9 @@
         <p class="no-results hidden" id="no-results">No songs match your search.</p>
       </section>
 
+      <div id="chart-sentinel" aria-hidden="true"></div>
       <div id="song-add" hidden></div>
       <div id="search-backdrop"></div>
     </main>
-
-    <footer class="site-footer">
-      <div class="container footer-inner">
-        <p>&copy; 2026 SongBubble &mdash; <a href="/about/">About</a></p>
-        <p class="footer-note">Votes fade over 28 days to keep the chart fresh.</p>
-      </div>
-    </footer>
   </body>
 </html>

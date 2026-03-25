@@ -17,9 +17,11 @@ const LS_VOTED      = 'sb_voted';
 const LS_BUDGET     = 'sb_budget';
 
 // ── App state ─────────────────────────────────────────────────────────────────
-let allSongs      = [];   // top-10 chart
+let allSongs      = [];   // full chart (all songs with active votes)
 let searchQuery   = '';
 let mergedResults = null; // unified search list, or null in chart mode
+let visibleCount  = 10;   // how many chart entries are currently rendered
+const LOAD_BATCH  = 10;   // songs appended per scroll trigger
 
 // ── Playback state ────────────────────────────────────────────────────────────
 // amId: the apple_music_id of the active song (or null); state: idle|loading|playing|paused
@@ -380,9 +382,9 @@ function render(skipEntrance = false) {
   list.innerHTML = '';
 
   if (!searchQuery) {
-    // Chart mode — ranked top-10
-    const chartSongs = allSongs.slice(0, 10);
-    if (chartSongs.length === 0) { noResults.classList.remove('hidden'); return; }
+    // Chart mode — ranked, initially visibleCount songs
+    const chartSongs = allSongs.slice(0, visibleCount);
+    if (chartSongs.length === 0) { noResults.classList.remove('hidden'); updateSentinel(); return; }
     noResults.classList.add('hidden');
     chartSongs.forEach((song, i) => {
       const card = buildCard(song, i + 1, voted, remaining > 0);
@@ -390,6 +392,7 @@ function render(skipEntrance = false) {
       else card.style.animationDelay = `${i * 30}ms`;
       list.appendChild(card);
     });
+    updateSentinel();
     return;
   }
 
@@ -398,6 +401,38 @@ function render(skipEntrance = false) {
   if (songs.length === 0) { noResults.classList.remove('hidden'); return; }
   noResults.classList.add('hidden');
   songs.forEach(song => list.appendChild(buildCard(song, null, voted, remaining > 0)));
+}
+
+// ── Infinite scroll ───────────────────────────────────────────────────────────
+function updateSentinel() {
+  const sentinel = document.getElementById('chart-sentinel');
+  if (sentinel) sentinel.hidden = !!searchQuery || visibleCount >= allSongs.length;
+}
+
+function appendNextBatch() {
+  if (searchQuery || visibleCount >= allSongs.length) return;
+  const list      = document.getElementById('chart-list');
+  const voted     = loadVoted();
+  const remaining = votesRemaining();
+  const start     = visibleCount;
+  const end       = Math.min(visibleCount + LOAD_BATCH, allSongs.length);
+  for (let i = start; i < end; i++) {
+    const card = buildCard(allSongs[i], i + 1, voted, remaining > 0);
+    card.style.animationDelay = `${(i - start) * 30}ms`;
+    list.appendChild(card);
+  }
+  visibleCount = end;
+  updateSentinel();
+}
+
+function initScrollLoad() {
+  const sentinel = document.getElementById('chart-sentinel');
+  if (!sentinel) return;
+  const observer = new IntersectionObserver(
+    entries => { if (entries[0].isIntersecting) appendNextBatch(); },
+    { rootMargin: '200px' },
+  );
+  observer.observe(sentinel);
 }
 
 // ── Voting ────────────────────────────────────────────────────────────────────
@@ -606,6 +641,7 @@ document.addEventListener('song-added', (e) => {
 document.addEventListener('DOMContentLoaded', async () => {
   initSearch();
   initMusicKit();
+  initScrollLoad();
 
   document.getElementById('chart-list').innerHTML =
     '<li class="no-results">Loading…</li>';

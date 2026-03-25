@@ -350,6 +350,12 @@ body.is-searching .chart-header { display: none; }
 .vote-icon { font-size: 1.1rem; line-height: 1; }
 .vote-count { font-size: 0.78rem; font-weight: 700; }
 
+/* ── Scroll sentinel (infinite chart) ────────────────────── */
+#chart-sentinel {
+  height: 1.5rem;
+  margin-top: 0.25rem;
+}
+
 /* ── Empty state ──────────────────────────────────────────── */
 .no-results {
   text-align: center;

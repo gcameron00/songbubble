@@ -7,7 +7,7 @@ import type { Env } from '../env.d.ts';
 import { validateSubmission } from '../_lib/validate';
 
 const DECAY_SECONDS = 28 * 24 * 60 * 60; // 2 419 200 s = 28 days
-const CHART_SIZE    = 10;
+const CHART_LIMIT   = 500;              // practical ceiling for full chart
 const SEARCH_LIMIT  = 50;
 
 const SCORE_FRAGMENT = `
@@ -26,6 +26,7 @@ const LEADERBOARD_SQL = `
   FROM songs s
   LEFT JOIN votes v ON v.song_id = s.id
   GROUP BY s.id
+  HAVING score > 0
   ORDER BY score DESC
   LIMIT ?
 `;
@@ -53,7 +54,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   const { results } = await env.DB.prepare(LEADERBOARD_SQL)
-    .bind(DECAY_SECONDS, CHART_SIZE)
+    .bind(DECAY_SECONDS, CHART_LIMIT)
     .all();
 
   return Response.json(results, {
