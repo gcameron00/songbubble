@@ -844,6 +844,8 @@ body.is-searching .chart-header { display: none; }
   inset: 0;
   border: none;
   border-radius: 0.375rem;
+  -webkit-appearance: none;
+  appearance: none;
   background: transparent;
   color: #fff;
   font-size: 1.1rem;
