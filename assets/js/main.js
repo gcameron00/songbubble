@@ -230,10 +230,10 @@ function updatePlayUI() {
       overlay.innerHTML = '<span class="play-spinner" aria-hidden="true"></span>';
       overlay.setAttribute('aria-label', 'Loading\u2026');
     } else if (isPlaying) {
-      overlay.textContent = '\u23f8';
+      overlay.textContent = '\u23f8\ufe0e';
       overlay.setAttribute('aria-label', 'Pause');
     } else {
-      overlay.textContent = '\u25b6';
+      overlay.textContent = '\u25b6\ufe0e';
       overlay.setAttribute('aria-label', 'Play');
     }
   });
@@ -319,7 +319,7 @@ function buildCard(song, rank, voted, hasVoteBudget) {
       : `<div class="song-thumb thumb-placeholder" aria-hidden="true"></div>`;
     const overlayContent = isLoading
       ? '<span class="play-spinner" aria-hidden="true"></span>'
-      : (isPlaying ? '\u23f8' : '\u25b6');
+      : (isPlaying ? '\u23f8\ufe0e' : '\u25b6\ufe0e');
     thumbHtml = `<div class="${wrapClass}" data-am-id="${escHtml(song.apple_music_id)}">${imgHtml}<button class="play-overlay" aria-label="${isPlaying ? 'Pause' : 'Play'} ${escHtml(song.title)}">${overlayContent}</button></div>`;
   } else if (thumb) {
     thumbHtml = `<img class="song-thumb" src="${escHtml(thumb)}" alt="" aria-hidden="true" width="56" height="56">`;
