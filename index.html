@@ -6,6 +6,7 @@
     <title>SongBubble — Top songs right now</title>
     <link rel="stylesheet" href="/assets/css/styles.css" />
     <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" crossorigin></script>
+    <script src="/assets/js/changelog.js"></script>
     <script defer src="/assets/js/main.js"></script>
     <script defer src="/assets/js/tagline.js"></script>
     <script defer src="/assets/js/submit.js"></script>
@@ -61,5 +62,23 @@
       <div id="song-add" hidden></div>
       <div id="search-backdrop"></div>
     </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>&copy; 2026 SongBubble &mdash; <a href="/about/">About</a> &mdash; <a href="/about/changelog/" class="footer-version" id="footer-version"></a></p>
+        <p class="footer-note">Votes fade over 28 days to keep the chart fresh.</p>
+      </div>
+    </footer>
+
+    <dialog id="whats-new-dialog" aria-labelledby="wn-title">
+      <div class="wn-header">
+        <h2 class="wn-title" id="wn-title">What&rsquo;s new</h2>
+      </div>
+      <div class="wn-body" id="wn-body"></div>
+      <div class="wn-footer">
+        <a href="/about/changelog/" class="wn-history-link">See full history &rarr;</a>
+        <button class="wn-got-it" id="wn-got-it">Got it</button>
+      </div>
+    </dialog>
   </body>
 </html>

@@ -7,13 +7,13 @@ SongBubble is a community-driven song voting site that surfaces what people are 
 - Users nominate songs (title, artist, optional album)
 - Each user gets a limited number of votes per day, spread across the chart
 - Votes decay over time — last month's favourite doesn't crowd out what's resonating today
-- The main chart shows the current Top 10; historic charts are also available
-- Higher-placed songs display album artwork
+- The chart shows all songs with active votes, ranked by score, with infinite scroll
+- Album artwork is displayed throughout the chart
 
-**Planned features**
+**Apple Music integration**
 
-- Music catalogue search via Apple Music (in progress) and Spotify — find songs without typing manually
-- Playback integration for users with Apple Music or Spotify accounts
+- Search the Apple Music catalogue to find and nominate songs
+- In-page preview playback for songs with an Apple Music match
 
 See [documents/apple-music-integration.md](documents/apple-music-integration.md) for the Apple Music integration design.
 
@@ -27,7 +27,9 @@ See [documents/apple-music-integration.md](documents/apple-music-integration.md)
 
 - `index.html` — main chart / home page
 - `about/index.html` — about page
+- `about/changelog/index.html` — changelog history
 - `assets/css/styles.css` — styles
+- `assets/js/changelog.js` — version history data (bump this when shipping user-facing changes)
 - `functions/` — Cloudflare Pages Functions (API routes)
 - `migrations/` — D1 SQL migrations
 

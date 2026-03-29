@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Changelog &mdash; SongBubble</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <script src="/assets/js/changelog.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/" class="logo" aria-label="SongBubble home">
+          <span class="logo-bubble" aria-hidden="true">&#9679;</span>
+          SongBubble
+        </a>
+        <nav class="site-nav">
+          <a href="/">Chart</a>
+          <a href="/about/">About</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <a href="/about/" class="back-link">&larr; About</a>
+
+      <article class="about-content">
+        <h1>Changelog</h1>
+        <p class="changelog-intro">A record of meaningful changes to SongBubble.</p>
+        <ol class="changelog-list" id="changelog-list"></ol>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>&copy; 2026 SongBubble &mdash; <a href="/about/">About</a></p>
+        <p class="footer-note">Votes fade over 28 days to keep the chart fresh.</p>
+      </div>
+    </footer>
+
+    <script>
+      const list = document.getElementById('changelog-list');
+      CHANGELOG.forEach(entry => {
+        const li = document.createElement('li');
+        li.className = 'changelog-entry';
+        li.innerHTML = `
+          <div class="changelog-entry-header">
+            <span class="changelog-version">${entry.version}</span>
+            <span class="changelog-date">${entry.date}</span>
+          </div>
+          <h2 class="changelog-title">${entry.title}</h2>
+          <ul class="changelog-items">
+            ${entry.items.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+        `;
+        list.appendChild(li);
+      });
+    </script>
+  </body>
+</html>

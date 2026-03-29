@@ -8,13 +8,16 @@
  * localStorage keys:
  *   sb_voted   — { [songId]: dateString }
  *   sb_budget  — { used: number, day: string }
+ *   sb_version — string, last seen changelog version
  */
 
 'use strict';
 
-const VOTES_PER_DAY = 5;
-const LS_VOTED      = 'sb_voted';
-const LS_BUDGET     = 'sb_budget';
+const VOTES_PER_DAY    = 5;
+const LS_VOTED         = 'sb_voted';
+const LS_BUDGET        = 'sb_budget';
+const LS_VERSION       = 'sb_version';
+const BASELINE_VERSION = '2026.000'; // version before the changelog feature existed
 
 // ── App state ─────────────────────────────────────────────────────────────────
 let allSongs      = [];   // full chart (all songs with active votes)
@@ -637,11 +640,69 @@ document.addEventListener('song-added', (e) => {
   render();
 });
 
+// ── Changelog splash ──────────────────────────────────────────────────────────
+function checkNewVersion() {
+  // Stamp the footer version link.
+  const footerVersionEl = document.getElementById('footer-version');
+  if (footerVersionEl) footerVersionEl.textContent = `v${CHANGELOG_VERSION}`;
+
+  let lastSeen = localStorage.getItem(LS_VERSION);
+
+  // First visit with this feature: set to baseline so existing users still see
+  // the first real release rather than being silently skipped past it.
+  if (!lastSeen) {
+    lastSeen = BASELINE_VERSION;
+    localStorage.setItem(LS_VERSION, lastSeen);
+  }
+
+  if (lastSeen >= CHANGELOG_VERSION) return; // nothing new to show
+
+  const newEntries = CHANGELOG.filter(e => e.version > lastSeen);
+  if (newEntries.length === 0) {
+    localStorage.setItem(LS_VERSION, CHANGELOG_VERSION);
+    return;
+  }
+
+  const dialog  = document.getElementById('whats-new-dialog');
+  const body    = document.getElementById('wn-body');
+  const gotItBtn = document.getElementById('wn-got-it');
+  if (!dialog || !body || !gotItBtn) return;
+
+  body.innerHTML = newEntries.map(entry => `
+    <div class="wn-entry">
+      <div class="wn-entry-meta">
+        <span class="wn-version">${entry.version}</span>
+        <span class="wn-date">${entry.date}</span>
+      </div>
+      <p class="wn-entry-title">${entry.title}</p>
+      <ul class="wn-items">
+        ${entry.items.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
+
+  dialog.showModal();
+
+  gotItBtn.addEventListener('click', () => {
+    dialog.close();
+    localStorage.setItem(LS_VERSION, CHANGELOG_VERSION);
+  }, { once: true });
+
+  // Also dismiss on backdrop click.
+  dialog.addEventListener('click', e => {
+    if (e.target === dialog) {
+      dialog.close();
+      localStorage.setItem(LS_VERSION, CHANGELOG_VERSION);
+    }
+  }, { once: true });
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   initSearch();
   initMusicKit();
   initScrollLoad();
+  checkNewVersion();
 
   document.getElementById('chart-list').innerHTML =
     '<li class="no-results">Loading…</li>';

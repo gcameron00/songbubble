@@ -16,8 +16,8 @@ Stores the pool of songs available for voting.
 | `album` | `TEXT` | Album name (nullable) |
 | `artwork_url` | `TEXT` | Cached artwork URL from catalogue API (nullable) |
 | `artwork_fetched_at` | `INTEGER` | Unix timestamp of last successful artwork fetch (nullable) |
-| `spotify_id` | `TEXT` | Spotify catalogue ID stub (nullable) |
-| `apple_music_id` | `TEXT` | Apple Music catalogue ID stub (nullable) |
+| `spotify_id` | `TEXT` | Spotify catalogue ID (nullable, reserved for future integration) |
+| `apple_music_id` | `TEXT` | Apple Music catalogue ID (nullable) |
 | `created_at` | `INTEGER` | Unix timestamp (seconds), defaults to `unixepoch()` at insert time |
 
 ### `votes`
@@ -112,7 +112,7 @@ All endpoints are implemented as Cloudflare Pages Functions in [`/functions/api`
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/health` | Returns `{ ok: true }` — liveness check |
-| `GET` | `/api/songs` | Top 10 songs ordered by decay-weighted score |
+| `GET` | `/api/songs` | All songs with active votes, ordered by decay-weighted score |
 | `GET` | `/api/songs?q=…` | Full-catalogue search across title, artist, and album (up to 50 results) |
 | `POST` | `/api/songs` | Submit a new song. Body: `{ title, artist, album? }` |
 | `GET` | `/api/votes` | Returns `{ voted_today: […], voted_ever: […] }` — song IDs the current browser has voted for today and all-time |
@@ -121,7 +121,7 @@ All endpoints are implemented as Cloudflare Pages Functions in [`/functions/api`
 
 ### Debug (BubbleTrouble)
 
-These endpoints power the [`/bubbletrouble/`](/bubbletrouble/) internal dashboard. They are not authenticated — access relies on the URL being unlisted.
+These endpoints power the [`/bubbletrouble/`](/bubbletrouble/) internal dashboard. Access is protected by Cloudflare Access.
 
 | Method | Path | Description |
 |---|---|---|

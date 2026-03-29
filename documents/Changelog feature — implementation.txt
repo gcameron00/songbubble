@@ -1,0 +1,54 @@
+Changelog feature — implementation summary
+Files
+assets/js/changelog.js — the data file, loaded independently of app logic
+
+
+const CHANGELOG_VERSION = 'YYYY.001';
+
+const CHANGELOG = [
+  {
+    version: 'YYYY.001',
+    date: 'YYYY-MM-DD',
+    title: 'Short release title',
+    items: [ 'Change one', 'Change two' ],
+  },
+];
+Newest entry first. Both index.html and the changelog page load this file.
+
+about/changelog/index.html — dynamic page, no manual maintenance
+
+Loads changelog.js via a <script> tag
+A small inline script iterates CHANGELOG and builds the DOM
+Styled with shared styles.css
+index.html
+
+<script src="assets/js/changelog.js"></script> loaded before main.js
+A second <dialog id="whats-new-dialog"> for the notification popup (separate from any confirm dialog)
+State (localStorage)
+Add one field to the persisted state object:
+
+
+lastSeenVersion: null
+Also add to clearState() so it resets on Start Over.
+
+Logic in main.js
+checkNewVersion() — async, called on page load:
+
+If lastSeenVersion is null (first visit with this feature): set it to the oldest "baseline" version (e.g. YYYY.000) and save — this ensures existing users will see the first real release rather than being silently skipped past it
+If lastSeenVersion >= CHANGELOG_VERSION: nothing to show
+Otherwise: filter CHANGELOG for entries where entry.version > lastSeenVersion, render them into the dialog, show it, wait for "Got it", then set lastSeenVersion = CHANGELOG_VERSION and save
+Load sequence (inside DOMContentLoaded):
+
+
+checkStaleWords()  →  checkNewVersion()  →  decide which section to open
+Run in series so dialogs don't stack.
+
+CLAUDE.md
+Documents the update process so the AI (and developers) know to:
+
+Add a new entry to the top of CHANGELOG
+Bump CHANGELOG_VERSION to match
+Only add entries for user-facing changes
+Version comparison
+YYYY.xxx strings compare correctly with > / >= — lexicographic order works because year is fixed-width and the counter is zero-padded.
+
