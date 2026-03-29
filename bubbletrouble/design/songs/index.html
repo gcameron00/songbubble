@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Song chart designs &mdash; BubbleTrouble</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <style>
+      /* ── Page shell ─────────────────────────────────────── */
+      .dv-note { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+
+      /* ── Sticky variant nav ─────────────────────────────── */
+      .dv-nav {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+        margin: 0 -1.25rem 2.5rem;
+        padding: 0 1.25rem;
+      }
+      .dv-nav::-webkit-scrollbar { display: none; }
+      .dv-nav a {
+        flex-shrink: 0;
+        padding: 0.65rem 1rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--muted);
+        text-decoration: none;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        transition: color 0.15s, border-color 0.15s;
+      }
+      .dv-nav a:hover { color: var(--brand); border-bottom-color: var(--brand-light); }
+      .dv-nav a.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+      /* ── Section wrapper ────────────────────────────────── */
+      .dv-section { margin-bottom: 4rem; scroll-margin-top: 3rem; }
+      .dv-section-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--border);
+      }
+      .dv-label {
+        flex-shrink: 0;
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #d97706;
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 800;
+        border-radius: 0.375rem;
+      }
+      .dv-section-header h2 { font-size: 1rem; font-weight: 700; line-height: 1.3; }
+      .dv-section-header p  { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
+      .dv-loading { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; }
+
+      /* ══ B · Compact rows ═══════════════════════════════════ */
+      .dv-compact-list {
+        list-style: none;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+      }
+      .dv-compact-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+        transition: background 0.1s;
+      }
+      .dv-compact-row:last-child { border-bottom: none; }
+      .dv-compact-row:hover { background: var(--bg); }
+      .dv-compact-rank {
+        width: 1.5rem;
+        text-align: right;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+      }
+      .dv-compact-rank.top3 { color: var(--brand); }
+      .dv-compact-art {
+        width: 40px;
+        height: 40px;
+        border-radius: 0.25rem;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: var(--border);
+      }
+      .dv-compact-info { flex: 1; min-width: 0; }
+      .dv-compact-line {
+        font-size: 0.875rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .dv-compact-line strong { font-weight: 600; }
+      .dv-compact-line span { color: var(--muted); }
+      .dv-compact-score {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      /* ══ C · Billboard ══════════════════════════════════════ */
+      .dv-bb-hero {
+        display: flex;
+        gap: 1.25rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-sm);
+        align-items: center;
+      }
+      .dv-bb-hero-rank {
+        font-size: 4rem;
+        font-weight: 900;
+        line-height: 1;
+        color: var(--brand);
+        letter-spacing: -0.04em;
+        flex-shrink: 0;
+        width: 3.5rem;
+        text-align: center;
+      }
+      .dv-bb-hero-art {
+        width: 100px;
+        height: 100px;
+        border-radius: 0.5rem;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: var(--border);
+      }
+      .dv-bb-hero-info { flex: 1; min-width: 0; }
+      .dv-bb-hero-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.2rem;
+      }
+      .dv-bb-hero-artist { font-size: 1rem; color: var(--muted); margin-bottom: 0.5rem; }
+      .dv-bb-hero-score {
+        display: inline-block;
+        background: var(--brand);
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 0.2em 0.6em;
+        border-radius: 999px;
+      }
+      .dv-bb-mid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      .dv-bb-mid-card {
+        display: flex;
+        gap: 0.75rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0.75rem;
+        box-shadow: var(--shadow-sm);
+        align-items: center;
+      }
+      .dv-bb-mid-rank {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: var(--brand-light);
+        line-height: 1;
+        width: 2rem;
+        text-align: center;
+        flex-shrink: 0;
+      }
+      .dv-bb-mid-art {
+        width: 64px;
+        height: 64px;
+        border-radius: 0.375rem;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: var(--border);
+      }
+      .dv-bb-mid-title { font-size: 0.9rem; font-weight: 700; line-height: 1.3; }
+      .dv-bb-mid-artist { font-size: 0.8rem; color: var(--muted); }
+      .dv-bb-rest { display: flex; flex-direction: column; }
+      .dv-bb-rest-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 0.5rem;
+        box-shadow: var(--shadow-sm);
+      }
+      .dv-bb-rest-rank {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: var(--muted);
+        width: 1.5rem;
+        text-align: center;
+        flex-shrink: 0;
+      }
+      .dv-bb-rest-art {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.25rem;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: var(--border);
+      }
+      .dv-bb-rest-title { font-size: 0.875rem; font-weight: 600; }
+      .dv-bb-rest-artist { font-size: 0.8rem; color: var(--muted); }
+      .dv-bb-rest-score {
+        margin-left: auto;
+        font-size: 0.78rem;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+      }
+
+      /* ══ D · Artwork tiles ══════════════════════════════════ */
+      .dv-tiles-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.75rem;
+      }
+      @media (max-width: 900px) { .dv-tiles-grid { grid-template-columns: repeat(4, 1fr); } }
+      @media (max-width: 600px) { .dv-tiles-grid { grid-template-columns: repeat(3, 1fr); } }
+      .dv-tile {
+        position: relative;
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: var(--border);
+        aspect-ratio: 1;
+        box-shadow: var(--shadow-sm);
+      }
+      .dv-tile img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .dv-tile-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 100%);
+        opacity: 0.3;
+      }
+      .dv-tile-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,.75) 0%, rgba(0,0,0,0) 50%);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 0.5rem;
+      }
+      .dv-tile-rank {
+        position: absolute;
+        top: 0.4rem;
+        left: 0.4rem;
+        background: rgba(0,0,0,.6);
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 800;
+        padding: 0.15em 0.4em;
+        border-radius: 0.25rem;
+        line-height: 1.4;
+      }
+      .dv-tile-rank.top3 { background: var(--brand); }
+      .dv-tile-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.25;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+      .dv-tile-artist {
+        font-size: 0.65rem;
+        color: rgba(255,255,255,.7);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 0.1rem;
+      }
+
+      /* ══ E · Minimal / typographic ═════════════════════════ */
+      .dv-minimal-list { list-style: none; }
+      .dv-minimal-row {
+        display: flex;
+        align-items: baseline;
+        gap: 1.25rem;
+        padding: 0.85rem 0;
+        border-bottom: 1px solid var(--border);
+        transition: background 0.1s;
+      }
+      .dv-minimal-row:first-child { border-top: 1px solid var(--border); }
+      .dv-minimal-rank {
+        font-size: 2rem;
+        font-weight: 900;
+        color: var(--border);
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        width: 3rem;
+        text-align: right;
+        flex-shrink: 0;
+        letter-spacing: -0.04em;
+      }
+      .dv-minimal-rank.top3 { color: var(--brand-light); }
+      .dv-minimal-info { flex: 1; min-width: 0; }
+      .dv-minimal-title {
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+      }
+      .dv-minimal-artist { font-size: 0.85rem; color: var(--muted); }
+      .dv-minimal-score {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+        white-space: nowrap;
+        align-self: center;
+      }
+
+      /* ══ F · Score bars ═════════════════════════════════════ */
+      .dv-bars-list { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+      .dv-bar-row {
+        display: grid;
+        grid-template-columns: 1.75rem 44px 1fr auto;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .dv-bar-rank {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--muted);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .dv-bar-art {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.25rem;
+        object-fit: cover;
+        background: var(--border);
+        flex-shrink: 0;
+      }
+      .dv-bar-middle { min-width: 0; }
+      .dv-bar-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .dv-bar-artist {
+        font-size: 0.75rem;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 0.25rem;
+      }
+      .dv-bar-track {
+        height: 6px;
+        background: var(--border);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .dv-bar-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--brand-light), var(--brand));
+        transition: width 0.6s cubic-bezier(0.34, 1.15, 0.64, 1);
+      }
+      .dv-bar-row:nth-child(1) .dv-bar-fill { background: linear-gradient(90deg, #a78bfa, var(--brand)); }
+      .dv-bar-score {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body class="bt-layout">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/bubbletrouble/" class="logo" style="color: #d97706;">
+          <span class="logo-bubble" style="color: #f59e0b;" aria-hidden="true">&#9679;</span>
+          BubbleTrouble
+        </a>
+        <nav class="site-nav">
+          <a href="/bubbletrouble/" class="debug-link">Overview</a>
+          <a href="/bubbletrouble/songs/" class="debug-link">Songs</a>
+          <a href="/bubbletrouble/votes/" class="debug-link">Votes</a>
+          <a href="/bubbletrouble/design/" class="debug-link active">Design</a>
+          <span class="site-nav-divider" aria-hidden="true"></span>
+          <a href="/">&#8592; SongBubble</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container" style="padding-top: 2rem;">
+      <div class="debug-header">
+        <h1>Song chart designs</h1>
+        <span class="debug-badge">design</span>
+      </div>
+      <p class="dv-note">Six variations on the voting chart, all using live data. Showing top 10. &larr; <a href="/bubbletrouble/design/">Back to design hub</a></p>
+
+      <nav class="dv-nav" id="dv-nav">
+        <a href="#v-current">A &middot; Current</a>
+        <a href="#v-compact">B &middot; Compact rows</a>
+        <a href="#v-billboard">C &middot; Billboard</a>
+        <a href="#v-tiles">D &middot; Artwork tiles</a>
+        <a href="#v-minimal">E &middot; Minimal</a>
+        <a href="#v-bars">F &middot; Score bars</a>
+      </nav>
+
+      <!-- A · Current ─────────────────────────────────────── -->
+      <section class="dv-section" id="v-current">
+        <div class="dv-section-header">
+          <span class="dv-label">A</span>
+          <div>
+            <h2>Current</h2>
+            <p>The existing implementation &mdash; white cards, artwork left, rank badge, score button right.</p>
+          </div>
+        </div>
+        <p class="dv-loading" id="load-a">Loading&hellip;</p>
+        <ol class="chart-list" id="list-a"></ol>
+      </section>
+
+      <!-- B · Compact rows ─────────────────────────────────── -->
+      <section class="dv-section" id="v-compact">
+        <div class="dv-section-header">
+          <span class="dv-label">B</span>
+          <div>
+            <h2>Compact rows</h2>
+            <p>Dense list in a single card. Title and artist on one line. More songs visible above the fold.</p>
+          </div>
+        </div>
+        <p class="dv-loading" id="load-b">Loading&hellip;</p>
+        <ol class="dv-compact-list" id="list-b"></ol>
+      </section>
+
+      <!-- C · Billboard ────────────────────────────────────── -->
+      <section class="dv-section" id="v-billboard">
+        <div class="dv-section-header">
+          <span class="dv-label">C</span>
+          <div>
+            <h2>Billboard</h2>
+            <p>Tiered hierarchy &mdash; hero for #1, paired cards for #2&ndash;3, compact rows for the rest.</p>
+          </div>
+        </div>
+        <p class="dv-loading" id="load-c">Loading&hellip;</p>
+        <div id="list-c"></div>
+      </section>
+
+      <!-- D · Artwork tiles ────────────────────────────────── -->
+      <section class="dv-section" id="v-tiles">
+        <div class="dv-section-header">
+          <span class="dv-label">D</span>
+          <div>
+            <h2>Artwork tiles</h2>
+            <p>Artwork-dominant grid. Rank badge and title overlaid. Score deprioritised.</p>
+          </div>
+        </div>
+        <p class="dv-loading" id="load-d">Loading&hellip;</p>
+        <div class="dv-tiles-grid" id="list-d"></div>
+      </section>
+
+      <!-- E · Minimal ──────────────────────────────────────── -->
+      <section class="dv-section" id="v-minimal">
+        <div class="dv-section-header">
+          <span class="dv-label">E</span>
+          <div>
+            <h2>Minimal</h2>
+            <p>No artwork. Large faded rank number. Pure typography &mdash; editorial feel.</p>
+          </div>
+        </div>
+        <p class="dv-loading" id="load-e">Loading&hellip;</p>
+        <ol class="dv-minimal-list" id="list-e"></ol>
+      </section>
+
+      <!-- F · Score bars ───────────────────────────────────── -->
+      <section class="dv-section" id="v-bars">
+        <div class="dv-section-header">
+          <span class="dv-label">F</span>
+          <div>
+            <h2>Score bars</h2>
+            <p>A proportional bar beneath each entry shows relative vote weight. Makes the gap between songs visible.</p>
+          </div>
+        </div>
+        <p class="dv-loading" id="load-f">Loading&hellip;</p>
+        <ol class="dv-bars-list" id="list-f"></ol>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p><a href="/bubbletrouble/design/">&#8592; Back to design hub</a></p>
+      </div>
+    </footer>
+
+    <script>
+      function esc(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+      function art(url, size) {
+        if (!url) return null;
+        return url.replace('{w}', size).replace('{h}', size);
+      }
+      function fmtScore(n) {
+        if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+        return String(Math.round(n));
+      }
+      function artImg(url, size, cls) {
+        const src = art(url, size);
+        return src
+          ? `<img src="${esc(src)}" class="${cls}" width="${size}" height="${size}" alt="" loading="lazy">`
+          : `<div class="${cls}"></div>`;
+      }
+      function rankLabel(r) {
+        return r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : String(r);
+      }
+
+      function renderA(songs) {
+        const ol = document.getElementById('list-a');
+        songs.forEach((song, i) => {
+          const rank = i + 1;
+          const rc   = rank <= 3 ? `rank-${rank}` : 'rank-other';
+          const thumb = art(song.artwork_url, 56);
+          const thumbHtml = thumb
+            ? `<img class="song-thumb" src="${esc(thumb)}" alt="" width="56" height="56">`
+            : `<div class="song-thumb thumb-placeholder" aria-hidden="true"></div>`;
+          const li = document.createElement('li');
+          li.className = 'song-card';
+          li.innerHTML = `
+            <span class="rank ${rc}" aria-label="Rank ${rank}">${rankLabel(rank)}</span>
+            ${thumbHtml}
+            <div class="song-body">
+              <p class="song-title">${esc(song.title)}</p>
+              <p class="song-meta"><strong>${esc(song.artist)}</strong>${song.album ? ` &mdash; ${esc(song.album)}` : ''}</p>
+            </div>
+            <div class="vote-btn" style="cursor:default" aria-hidden="true">
+              <span class="vote-icon">♡</span>
+              <span class="vote-count">${fmtScore(song.score)}</span>
+            </div>`;
+          ol.appendChild(li);
+        });
+        document.getElementById('load-a').hidden = true;
+      }
+
+      function renderB(songs) {
+        const ol = document.getElementById('list-b');
+        songs.forEach((song, i) => {
+          const rank = i + 1;
+          const li = document.createElement('li');
+          li.className = 'dv-compact-row';
+          li.innerHTML = `
+            <span class="dv-compact-rank${rank <= 3 ? ' top3' : ''}">${rank}</span>
+            ${artImg(song.artwork_url, 40, 'dv-compact-art')}
+            <div class="dv-compact-info">
+              <div class="dv-compact-line">
+                <strong>${esc(song.title)}</strong>
+                <span> &middot; ${esc(song.artist)}</span>
+              </div>
+            </div>
+            <span class="dv-compact-score">${fmtScore(song.score)} pts</span>`;
+          ol.appendChild(li);
+        });
+        document.getElementById('load-b').hidden = true;
+      }
+
+      function renderC(songs) {
+        const wrap = document.getElementById('list-c');
+        const s1 = songs[0];
+        if (s1) {
+          const a1 = art(s1.artwork_url, 100);
+          wrap.innerHTML += `
+            <div class="dv-bb-hero">
+              <div class="dv-bb-hero-rank">1</div>
+              ${a1 ? `<img src="${esc(a1)}" class="dv-bb-hero-art" alt="">` : '<div class="dv-bb-hero-art"></div>'}
+              <div class="dv-bb-hero-info">
+                <div class="dv-bb-hero-title">${esc(s1.title)}</div>
+                <div class="dv-bb-hero-artist">${esc(s1.artist)}</div>
+                <span class="dv-bb-hero-score">${fmtScore(s1.score)} pts</span>
+              </div>
+            </div>`;
+        }
+        const mid = songs.slice(1, 3);
+        if (mid.length) {
+          let h = '<div class="dv-bb-mid">';
+          mid.forEach((song, j) => {
+            const am = art(song.artwork_url, 64);
+            h += `<div class="dv-bb-mid-card">
+              <div class="dv-bb-mid-rank">${j + 2}</div>
+              ${am ? `<img src="${esc(am)}" class="dv-bb-mid-art" alt="">` : '<div class="dv-bb-mid-art"></div>'}
+              <div><div class="dv-bb-mid-title">${esc(song.title)}</div><div class="dv-bb-mid-artist">${esc(song.artist)}</div></div>
+            </div>`;
+          });
+          wrap.innerHTML += h + '</div>';
+        }
+        const rest = songs.slice(3);
+        if (rest.length) {
+          let h = '<div class="dv-bb-rest">';
+          rest.forEach((song, j) => {
+            const ar = art(song.artwork_url, 44);
+            h += `<div class="dv-bb-rest-row">
+              <span class="dv-bb-rest-rank">${j + 4}</span>
+              ${ar ? `<img src="${esc(ar)}" class="dv-bb-rest-art" alt="">` : '<div class="dv-bb-rest-art"></div>'}
+              <div><div class="dv-bb-rest-title">${esc(song.title)}</div><div class="dv-bb-rest-artist">${esc(song.artist)}</div></div>
+              <span class="dv-bb-rest-score">${fmtScore(song.score)} pts</span>
+            </div>`;
+          });
+          wrap.innerHTML += h + '</div>';
+        }
+        document.getElementById('load-c').hidden = true;
+      }
+
+      function renderD(songs) {
+        const grid = document.getElementById('list-d');
+        songs.forEach((song, i) => {
+          const rank = i + 1;
+          const a = art(song.artwork_url, 200);
+          const tile = document.createElement('div');
+          tile.className = 'dv-tile';
+          tile.innerHTML = `
+            ${a ? `<img src="${esc(a)}" alt="">` : '<div class="dv-tile-placeholder"></div>'}
+            <div class="dv-tile-overlay">
+              <div class="dv-tile-rank${rank <= 3 ? ' top3' : ''}">${rank}</div>
+              <div class="dv-tile-title">${esc(song.title)}</div>
+              <div class="dv-tile-artist">${esc(song.artist)}</div>
+            </div>`;
+          grid.appendChild(tile);
+        });
+        document.getElementById('load-d').hidden = true;
+      }
+
+      function renderE(songs) {
+        const ol = document.getElementById('list-e');
+        songs.forEach((song, i) => {
+          const rank = i + 1;
+          const li = document.createElement('li');
+          li.className = 'dv-minimal-row';
+          li.innerHTML = `
+            <span class="dv-minimal-rank${rank <= 3 ? ' top3' : ''}">${rank}</span>
+            <div class="dv-minimal-info">
+              <div class="dv-minimal-title">${esc(song.title)}</div>
+              <div class="dv-minimal-artist">${esc(song.artist)}</div>
+            </div>
+            <span class="dv-minimal-score">${fmtScore(song.score)} pts</span>`;
+          ol.appendChild(li);
+        });
+        document.getElementById('load-e').hidden = true;
+      }
+
+      function renderF(songs, maxScore) {
+        const ol = document.getElementById('list-f');
+        songs.forEach((song, i) => {
+          const rank = i + 1;
+          const pct  = maxScore > 0 ? Math.max(2, Math.round((song.score / maxScore) * 100)) : 2;
+          const li = document.createElement('li');
+          li.className = 'dv-bar-row';
+          li.innerHTML = `
+            <span class="dv-bar-rank">${rank}</span>
+            ${artImg(song.artwork_url, 44, 'dv-bar-art')}
+            <div class="dv-bar-middle">
+              <div class="dv-bar-name">${esc(song.title)}</div>
+              <div class="dv-bar-artist">${esc(song.artist)}</div>
+              <div class="dv-bar-track"><div class="dv-bar-fill" style="width:0%" data-pct="${pct}"></div></div>
+            </div>
+            <span class="dv-bar-score">${fmtScore(song.score)}</span>`;
+          ol.appendChild(li);
+        });
+        requestAnimationFrame(() => {
+          document.querySelectorAll('.dv-bar-fill').forEach(el => { el.style.width = el.dataset.pct + '%'; });
+        });
+        document.getElementById('load-f').hidden = true;
+      }
+
+      function initScrollSpy() {
+        const sections = document.querySelectorAll('.dv-section');
+        const links    = document.querySelectorAll('.dv-nav a');
+        const obs = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              links.forEach(a => a.classList.remove('active'));
+              const link = document.querySelector(`.dv-nav a[href="#${entry.target.id}"]`);
+              if (link) { link.classList.add('active'); link.scrollIntoView({ block: 'nearest', inline: 'center' }); }
+            }
+          });
+        }, { threshold: 0.2 });
+        sections.forEach(s => obs.observe(s));
+      }
+
+      (async () => {
+        try {
+          const songs    = await fetch('/api/songs').then(r => r.json());
+          const top      = songs.slice(0, 10);
+          const maxScore = top[0]?.score ?? 1;
+          renderA(top); renderB(top); renderC(top); renderD(top); renderE(top); renderF(top, maxScore);
+        } catch {
+          document.querySelectorAll('.dv-loading').forEach(el => { el.textContent = 'Could not load songs.'; });
+        }
+        initScrollSpy();
+      })();
+    </script>
+  </body>
+</html>

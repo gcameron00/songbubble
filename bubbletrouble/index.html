@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BubbleTrouble &mdash; SongBubble debug</title>
     <link rel="stylesheet" href="/assets/css/styles.css" />
+    <style>
+      .bt-area-svg { width: 100%; display: block; overflow: visible; }
+      .bt-area-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1rem 1rem 0.5rem;
+        box-shadow: var(--shadow-sm);
+      }
+    </style>
   </head>
   <body class="bt-layout">
     <header class="site-header">
@@ -17,6 +27,7 @@
           <a href="/bubbletrouble/" class="debug-link active">Overview</a>
           <a href="/bubbletrouble/songs/" class="debug-link">Songs</a>
           <a href="/bubbletrouble/votes/" class="debug-link">Votes</a>
+          <a href="/bubbletrouble/design/" class="debug-link">Design</a>
           <span class="site-nav-divider" aria-hidden="true"></span>
           <a href="/">&#8592; SongBubble</a>
         </nav>
@@ -185,28 +196,85 @@
         }
       }
 
+      function shortDate(iso) {
+        return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {
+          timeZone: 'UTC', month: 'short', day: 'numeric',
+        });
+      }
+
       async function loadActivity() {
         const container = document.getElementById('activity');
         try {
-          const data = await fetch('/api/debug/activity').then(r => r.json());
-          const max  = Math.max(1, ...data.map(d => d.count));
+          const data  = await fetch('/api/debug/activity').then(r => r.json());
+          const max   = Math.max(1, ...data.map(d => d.count));
+          const total = data.reduce((s, d) => s + d.count, 0);
           const today = new Date().toISOString().slice(0, 10);
+          const n     = data.length;
+
+          const W = 800, H = 180;
+          const PAD = { top: 16, right: 12, bottom: 36, left: 28 };
+          const iW = W - PAD.left - PAD.right;
+          const iH = H - PAD.top - PAD.bottom;
+
+          const pts = data.map((d, i) => ({
+            x: PAD.left + (i / (n - 1)) * iW,
+            y: PAD.top + iH - (max > 0 ? (d.count / max) * iH : 0),
+            d,
+          }));
+
+          function curvePath(pts) {
+            let p = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+            for (let i = 1; i < pts.length; i++) {
+              const cpx = ((pts[i - 1].x + pts[i].x) / 2).toFixed(1);
+              p += ` C ${cpx} ${pts[i-1].y.toFixed(1)} ${cpx} ${pts[i].y.toFixed(1)} ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`;
+            }
+            return p;
+          }
+
+          const linePath = curvePath(pts);
+          const floor    = (PAD.top + iH).toFixed(1);
+          const areaPath = `${linePath} L ${pts[n-1].x.toFixed(1)} ${floor} L ${pts[0].x.toFixed(1)} ${floor} Z`;
+
+          const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => {
+            const y = (PAD.top + iH - f * iH).toFixed(1);
+            return `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>
+                    <text x="${PAD.left - 4}" y="${y}" dy="4" text-anchor="end" font-size="9" fill="#9ca3af">${Math.round(f * max)}</text>`;
+          }).join('');
+
+          const xLabels = [0, 6, 13, 20, 27].map(i =>
+            `<text x="${pts[i].x.toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#9ca3af">${shortDate(data[i].vote_day)}</text>`
+          ).join('');
+
+          const todayPt   = pts[n - 1];
+          const todayLine = `<line x1="${todayPt.x.toFixed(1)}" y1="${PAD.top}" x2="${todayPt.x.toFixed(1)}" y2="${floor}" stroke="#7c3aed" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>`;
+
+          const dots = pts.map(pt => {
+            const isToday = pt.d.vote_day === today;
+            if (pt.d.count === 0 && !isToday) return '';
+            return `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isToday ? 5 : 3}"
+              fill="${isToday ? '#7c3aed' : '#fff'}" stroke="${isToday ? '#7c3aed' : '#a78bfa'}" stroke-width="${isToday ? 2 : 1.5}">
+              <title>${pt.d.vote_day}: ${pt.d.count} vote${pt.d.count !== 1 ? 's' : ''}</title>
+            </circle>`;
+          }).join('');
 
           container.innerHTML = `
-            <div class="bt-activity-chart">
-              ${data.map(d => {
-                const pct     = Math.round((d.count / max) * 100);
-                const isToday = d.vote_day === today;
-                const label   = d.vote_day.slice(5);
-                return `
-                  <div class="bt-bar-wrap${isToday ? ' bt-bar-today' : ''}" title="${d.vote_day}: ${d.count} vote${d.count === 1 ? '' : 's'}">
-                    <div class="bt-bar" style="height:${pct}%"></div>
-                    <span class="bt-bar-label">${label}</span>
-                  </div>`;
-              }).join('')}
-            </div>
-            <p class="bt-activity-note">Peak: ${max} vote${max === 1 ? '' : 's'} in a day</p>
-          `;
+            <div class="bt-area-wrap">
+              <svg class="bt-area-svg" viewBox="0 0 ${W} ${H}">
+                <defs>
+                  <linearGradient id="bt-ag" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="#7c3aed" stop-opacity="0.02"/>
+                  </linearGradient>
+                </defs>
+                ${gridLines}
+                <path d="${areaPath}" fill="url(#bt-ag)"/>
+                <path d="${linePath}" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linejoin="round"/>
+                ${todayLine}
+                ${dots}
+                ${xLabels}
+              </svg>
+              <p class="bt-activity-note">Peak: ${max} vote${max === 1 ? '' : 's'} in a day &mdash; ${total} total over 28 days</p>
+            </div>`;
         } catch {
           container.textContent = 'Could not load activity.';
         }
