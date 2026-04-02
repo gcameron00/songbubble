@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Import playlist &mdash; BubbleTrouble</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" crossorigin></script>
+    <style>
+      .import-step { margin-bottom: 2.5rem; }
+
+      .import-status { font-size: 0.875rem; color: var(--muted); margin-top: 0.5rem; }
+      .import-status--ok  { color: #16a34a; }
+      .import-status--err { color: #dc2626; }
+
+      .playlist-select {
+        display: block; width: 100%; max-width: 480px;
+        padding: 0.5rem 0.75rem;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); color: var(--text);
+        font-size: 0.875rem; margin-bottom: 0.75rem;
+      }
+
+      .track-list {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); overflow: hidden;
+        margin-bottom: 0.75rem;
+        max-height: 360px; overflow-y: auto;
+      }
+      .track-row {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border);
+        font-size: 0.875rem;
+      }
+      .track-row:last-child { border-bottom: none; }
+      .track-num {
+        color: var(--muted); min-width: 2rem; text-align: right;
+        font-variant-numeric: tabular-nums; flex-shrink: 0;
+      }
+      .track-info { flex: 1; min-width: 0; }
+      .track-title {
+        font-weight: 600;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .track-meta {
+        color: var(--muted); font-size: 0.8125rem;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .track-badge {
+        font-size: 0.6875rem; padding: 0.125rem 0.375rem;
+        border-radius: 9999px; border: 1px solid; white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .track-badge--warn { color: #d97706; border-color: #fde68a; background: #fffbeb; }
+
+      .progress-bar-wrap {
+        background: var(--border); border-radius: 9999px; height: 6px;
+        margin-bottom: 0.75rem; overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%; background: #7c3aed; border-radius: 9999px;
+        transition: width 0.1s;
+      }
+      .progress-log {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 0.75rem;
+        font-size: 0.8125rem; font-family: monospace;
+        max-height: 300px; overflow-y: auto;
+        margin-bottom: 0.75rem;
+      }
+      .progress-log p { margin: 0.125rem 0; }
+      .log-ok   { color: #16a34a; }
+      .log-skip { color: var(--muted); }
+      .log-err  { color: #dc2626; }
+    </style>
+  </head>
+  <body class="bt-layout">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/bubbletrouble/" class="logo" style="color: #d97706;">
+          <span class="logo-bubble" style="color: #f59e0b;" aria-hidden="true">&#9679;</span>
+          BubbleTrouble
+        </a>
+        <nav class="site-nav">
+          <a href="/bubbletrouble/" class="debug-link">Overview</a>
+          <a href="/bubbletrouble/songs/" class="debug-link">Songs</a>
+          <a href="/bubbletrouble/votes/" class="debug-link">Votes</a>
+          <a href="/bubbletrouble/import/" class="debug-link active">Import</a>
+          <a href="/bubbletrouble/design/" class="debug-link">Design</a>
+          <span class="site-nav-divider" aria-hidden="true"></span>
+          <a href="/">&#8592; SongBubble</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container" style="padding-top: 2rem;">
+
+      <div class="debug-header">
+        <h1>Import playlist</h1>
+        <span class="debug-badge">debug</span>
+      </div>
+      <p class="debug-note">Import all songs from an Apple Music library playlist into the SongBubble database. Songs already in the DB (matched by Apple Music ID) are skipped.</p>
+
+      <!-- ── Step 1: Connect ──────────────────────────────────────── -->
+      <section class="import-step" id="sec-connect">
+        <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">1. Connect Apple Music</h2>
+        <div class="bt-utils">
+          <div class="bt-util">
+            <div class="bt-util-info">
+              <span class="bt-util-title">Sign in to Apple Music</span>
+              <span class="bt-util-desc">Authorises this page to read your library playlists. Nothing is stored beyond the import.</span>
+            </div>
+            <button class="bt-util-btn" id="btn-connect" onclick="connect()">Connect</button>
+          </div>
+        </div>
+        <p class="import-status" id="connect-status"></p>
+      </section>
+
+      <!-- ── Step 2: Choose playlist ─────────────────────────────── -->
+      <section class="import-step hidden" id="sec-playlist">
+        <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">2. Choose a playlist</h2>
+        <select class="playlist-select" id="playlist-select" onchange="onPlaylistChange()">
+          <option value="">&#8212; select a playlist &#8212;</option>
+        </select>
+        <button class="bt-util-btn" id="btn-load" onclick="loadTracks()" disabled>Load tracks</button>
+        <p class="import-status" id="playlist-status"></p>
+      </section>
+
+      <!-- ── Step 3: Preview ─────────────────────────────────────── -->
+      <section class="import-step hidden" id="sec-tracks">
+        <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">3. Preview tracks</h2>
+        <p class="import-status" id="tracks-status"></p>
+        <div class="track-list" id="track-list"></div>
+        <button class="bt-util-btn" id="btn-import" onclick="startImport()">Import</button>
+      </section>
+
+      <!-- ── Step 4: Progress ────────────────────────────────────── -->
+      <section class="import-step hidden" id="sec-progress">
+        <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">4. Importing</h2>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+        <p class="import-status" id="progress-status"></p>
+        <div class="progress-log" id="progress-log"></div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p><a href="/bubbletrouble/">&#8592; Back to BubbleTrouble</a></p>
+      </div>
+    </footer>
+
+    <script>
+      'use strict';
+
+      let musicKit = null;
+      let tracks   = [];  // normalised track objects ready for import
+
+      // ── MusicKit ────────────────────────────────────────────────────────────
+      async function initMusicKit() {
+        await new Promise(resolve => {
+          if (window.MusicKit) return resolve();
+          document.addEventListener('musickitloaded', resolve, { once: true });
+        });
+        const res = await fetch('/api/apple-music/token');
+        if (!res.ok) throw new Error('Could not fetch developer token');
+        const { token } = await res.json();
+        musicKit = await MusicKit.configure({
+          developerToken: token,
+          app: { name: 'SongBubble', build: '1.0.0' },
+        });
+      }
+
+      // ── Step 1 ──────────────────────────────────────────────────────────────
+      async function connect() {
+        const btn    = document.getElementById('btn-connect');
+        const status = document.getElementById('connect-status');
+        btn.disabled     = true;
+        btn.textContent  = 'Connecting\u2026';
+        status.textContent = '';
+        status.className   = 'import-status';
+        try {
+          if (!musicKit) await initMusicKit();
+          await musicKit.authorize();
+          btn.textContent    = 'Connected';
+          status.textContent = '\u2713 Signed in to Apple Music';
+          status.className   = 'import-status import-status--ok';
+          await loadPlaylists();
+          document.getElementById('sec-playlist').classList.remove('hidden');
+        } catch (err) {
+          btn.disabled    = false;
+          btn.textContent = 'Connect';
+          status.textContent = 'Error: ' + err.message;
+          status.className   = 'import-status import-status--err';
+        }
+      }
+
+      // ── Step 2 ──────────────────────────────────────────────────────────────
+      async function loadPlaylists() {
+        const sel    = document.getElementById('playlist-select');
+        const status = document.getElementById('playlist-status');
+        status.textContent = 'Loading playlists\u2026';
+        status.className   = 'import-status';
+
+        let playlists = [];
+        let next = '/v1/me/library/playlists?limit=100';
+        while (next) {
+          const res  = await musicKit.api.music(next);
+          playlists  = playlists.concat(res.data.data ?? []);
+          next       = res.data.next ?? null;
+        }
+
+        // Remove the placeholder option and repopulate.
+        sel.innerHTML = '<option value="">&#8212; select a playlist &#8212;</option>';
+        for (const pl of playlists) {
+          const opt       = document.createElement('option');
+          opt.value       = pl.id;
+          opt.textContent = pl.attributes?.name ?? pl.id;
+          sel.appendChild(opt);
+        }
+        status.textContent = `${playlists.length} playlist${playlists.length === 1 ? '' : 's'} found.`;
+      }
+
+      function onPlaylistChange() {
+        document.getElementById('btn-load').disabled =
+          !document.getElementById('playlist-select').value;
+        // Hide any previous track preview when a new playlist is selected.
+        document.getElementById('sec-tracks').classList.add('hidden');
+        document.getElementById('sec-progress').classList.add('hidden');
+      }
+
+      // ── Step 3 ──────────────────────────────────────────────────────────────
+      async function loadTracks() {
+        const plId   = document.getElementById('playlist-select').value;
+        if (!plId) return;
+        const btn    = document.getElementById('btn-load');
+        const status = document.getElementById('playlist-status');
+        btn.disabled    = true;
+        btn.textContent = 'Loading\u2026';
+        document.getElementById('sec-tracks').classList.add('hidden');
+        document.getElementById('sec-progress').classList.add('hidden');
+
+        try {
+          let raw  = [];
+          let next = `/v1/me/library/playlists/${encodeURIComponent(plId)}/tracks?limit=100`;
+          while (next) {
+            const res = await musicKit.api.music(next);
+            raw  = raw.concat(res.data.data ?? []);
+            next = res.data.next ?? null;
+          }
+
+          tracks = raw
+            .map(item => {
+              const a = item.attributes ?? {};
+              return {
+                title:          a.name         ?? '',
+                artist:         a.artistName   ?? '',
+                album:          a.albumName    ?? null,
+                apple_music_id: a.playParams?.catalogId ?? null,
+                artwork_url:    a.artwork?.url ?? null,
+              };
+            })
+            .filter(t => t.title && t.artist);
+
+          renderTracks();
+          document.getElementById('sec-tracks').classList.remove('hidden');
+          btn.textContent = 'Reload tracks';
+          btn.disabled    = false;
+        } catch (err) {
+          status.textContent = 'Error loading tracks: ' + err.message;
+          status.className   = 'import-status import-status--err';
+          btn.textContent    = 'Load tracks';
+          btn.disabled       = false;
+        }
+      }
+
+      function renderTracks() {
+        const list   = document.getElementById('track-list');
+        const status = document.getElementById('tracks-status');
+        const btn    = document.getElementById('btn-import');
+        list.innerHTML = '';
+
+        const noId = tracks.filter(t => !t.apple_music_id).length;
+        let note = `${tracks.length} track${tracks.length === 1 ? '' : 's'}`;
+        if (noId > 0) note += ` \u2014 ${noId} without a catalogue ID (will import title/artist only)`;
+        status.textContent = note;
+        status.className   = 'import-status';
+
+        btn.textContent = `Import ${tracks.length} song${tracks.length === 1 ? '' : 's'}`;
+
+        for (let i = 0; i < tracks.length; i++) {
+          const t   = tracks[i];
+          const row = document.createElement('div');
+          row.className = 'track-row';
+          const meta = [t.artist, t.album].filter(Boolean).join(' \u2014 ');
+          row.innerHTML = `
+            <span class="track-num">${i + 1}</span>
+            <span class="track-info">
+              <div class="track-title">${esc(t.title)}</div>
+              <div class="track-meta">${esc(meta)}</div>
+            </span>
+            ${!t.apple_music_id ? '<span class="track-badge track-badge--warn">no AM ID</span>' : ''}
+          `;
+          list.appendChild(row);
+        }
+      }
+
+      // ── Step 4 ──────────────────────────────────────────────────────────────
+      async function startImport() {
+        if (!tracks.length) return;
+        document.getElementById('btn-import').disabled = true;
+        document.getElementById('sec-progress').classList.remove('hidden');
+
+        const log    = document.getElementById('progress-log');
+        const bar    = document.getElementById('progress-bar');
+        const status = document.getElementById('progress-status');
+        log.innerHTML = '';
+
+        let added = 0, existed = 0, failed = 0;
+
+        function logLine(cls, msg) {
+          const p = document.createElement('p');
+          if (cls) p.className = cls;
+          p.textContent = msg;
+          log.appendChild(p);
+          log.scrollTop = log.scrollHeight;
+        }
+
+        for (let i = 0; i < tracks.length; i++) {
+          const t = tracks[i];
+          bar.style.width    = `${Math.round((i / tracks.length) * 100)}%`;
+          status.textContent = `${i + 1} / ${tracks.length}`;
+
+          try {
+            const body = { title: t.title, artist: t.artist };
+            if (t.album)          body.album          = t.album;
+            if (t.apple_music_id) body.apple_music_id = t.apple_music_id;
+            if (t.artwork_url)    body.artwork_url    = t.artwork_url;
+
+            const res  = await fetch('/api/songs', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify(body),
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+              failed++;
+              logLine('log-err', `\u2717 ${t.title} \u2014 ${data.error ?? data.errors?.join(', ') ?? res.status}`);
+            } else if (res.status === 201) {
+              added++;
+              logLine('log-ok', `\u2713 ${t.title}`);
+            } else {
+              existed++;
+              logLine('log-skip', `\u2014 ${t.title} (already in DB)`);
+            }
+          } catch (err) {
+            failed++;
+            logLine('log-err', `\u2717 ${t.title} \u2014 ${err.message}`);
+          }
+        }
+
+        bar.style.width = '100%';
+        logLine('', '\u2014\u2014\u2014');
+        logLine(
+          failed > 0 ? 'log-err' : added > 0 ? 'log-ok' : 'log-skip',
+          `${added} added, ${existed} already existed, ${failed} failed`,
+        );
+        status.textContent = `Done \u2014 ${added} added, ${existed} already existed, ${failed} failed.`;
+        status.className   = failed > 0 ? 'import-status import-status--err'
+                           : added  > 0 ? 'import-status import-status--ok'
+                           : 'import-status';
+
+        document.getElementById('btn-import').disabled = false;
+      }
+
+      function esc(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+    </script>
+  </body>
+</html>
